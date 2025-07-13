@@ -1,24 +1,24 @@
-function animateQuoteChange(newQuote) { // Removed isCustomVibe parameter
+function animateQuoteChange(newQuote) {
     if (isAnimating || !quoteTextEl || !quoteAuthorEl) return;
     isAnimating = true;
-
-    quoteTextEl.classList.add('exit-active');
-    quoteAuthorEl.classList.add('author-exit');
+    const loader = document.getElementById('loader');
+    loader.classList.remove('hidden');
+    quoteTextEl.classList.add('hidden');
+    quoteAuthorEl.classList.add('hidden');
 
     setTimeout(() => {
         currentQuote = newQuote;
         quoteTextEl.textContent = currentQuote.text;
-        quoteAuthorEl.textContent = currentQuote.author ? `— ${currentQuote.author}` : `— Anonymous`; // Simplified author
+        quoteAuthorEl.textContent = currentQuote.author ? `— ${currentQuote.author}` : `— Anonymous`;
         applyThemeStyles(currentQuote.category || 'values');
         quoteTextEl.dataset.text = currentQuote.text;
 
-        setTimeout(() => {
-            quoteTextEl.classList.remove('exit-active');
-            quoteAuthorEl.classList.remove('author-exit');
-            quoteTextEl.classList.add('enter-active');
-            quoteAuthorEl.classList.add('author-enter');
-            if (visualEffectsEnabled) quoteTextEl.classList.add('glitch-effect');
-        }, 50);
+        loader.classList.add('hidden');
+        quoteTextEl.classList.remove('hidden');
+        quoteAuthorEl.classList.remove('hidden');
+        quoteTextEl.classList.add('enter-active');
+        quoteAuthorEl.classList.add('author-enter');
+        if (visualEffectsEnabled) quoteTextEl.classList.add('glitch-effect');
 
         setTimeout(() => {
             quoteTextEl.classList.remove('enter-active', 'glitch-effect');
@@ -27,7 +27,7 @@ function animateQuoteChange(newQuote) { // Removed isCustomVibe parameter
             updateSocialLinks();
             updateFavoriteButtonUI();
         }, 800);
-    }, 600);
+    }, 1000);
 }
 
 function generatePattern() {
@@ -56,13 +56,12 @@ function updateSocialLinks() {
     if (!currentQuote || !socialLinks.twitter || currentQuote.category === 'favorites_empty' || currentQuote.category === 'category_empty' || currentQuote.category === 'empty') return;
     const textToShare = `"${currentQuote.text}" ${currentQuote.author ? `— ${currentQuote.author}` : '— Anonymous'}`; // Simplified
     const encodedText = encodeURIComponent(textToShare);
-    const pageUrl = window.location.href;
-    const encodedUrl = encodeURIComponent(pageUrl);
-    socialLinks.twitter.href = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
-    socialLinks.facebook.href = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`;
-    socialLinks.linkedin.href = `https://www.linkedin.com/shareArticle?mini=true&url=${encodedUrl}&title=Inspirational%20Quote&summary=${encodedText}`;
-    socialLinks.whatsapp.href = `https://wa.me/?text=${encodedText}%20${encodedUrl}`;
-    socialLinks.pinterest.href = `https://pinterest.com/pin/create/button/?url=${encodedUrl}&description=${encodedText}`;
+    const pageUrl = encodeURIComponent(window.location.href);
+    socialLinks.twitter.href = `https://twitter.com/intent/tweet?text=${encodedText}&url=${pageUrl}`;
+    socialLinks.facebook.href = `https://www.facebook.com/sharer/sharer.php?u=${pageUrl}&quote=${encodedText}`;
+    socialLinks.linkedin.href = `https://www.linkedin.com/shareArticle?mini=true&url=${pageUrl}&title=Inspirational%20Quote&summary=${encodedText}`;
+    socialLinks.whatsapp.href = `https://wa.me/?text=${encodedText}%20${pageUrl}`;
+    socialLinks.pinterest.href = `https://pinterest.com/pin/create/button/?url=${pageUrl}&description=${encodedText}`;
 }
 
 function updateFavoriteButtonUI() {

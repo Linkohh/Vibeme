@@ -50,11 +50,20 @@ function setupClearFavoritesButton() {
     if(!clearFavoritesBtnEl) return;
     clearFavoritesBtnEl.addEventListener('click', () => {
         if (confirm("Are you sure you want to clear all your favorites? This cannot be undone.")) {
-            favoriteQuotes = []; saveFavorites(); updateFavoriteButtonUI();
-            if (activeCategory === 'Favorites') { activeCategory = 'All'; generateQuote(); }
-            if(copyFeedbackEl) copyFeedbackEl.textContent = "Favorites cleared.";
-            if(copyTimeout) clearTimeout(copyTimeout);
-            copyTimeout = setTimeout(() => { if(copyFeedbackEl) copyFeedbackEl.textContent = ""; }, CONFIG.COPY_FEEDBACK_DURATION);
+            favoriteQuotes = [];
+            saveFavorites();
+            updateFavoriteButtonUI();
+            if (activeCategory === 'Favorites') {
+                activeCategory = 'All';
+                generateQuote();
+            }
+            if(copyFeedbackEl) {
+                copyFeedbackEl.textContent = "Favorites cleared.";
+                if(copyTimeout) clearTimeout(copyTimeout);
+                copyTimeout = setTimeout(() => {
+                    if(copyFeedbackEl) copyFeedbackEl.textContent = "";
+                }, CONFIG.COPY_FEEDBACK_DURATION);
+            }
         }
     });
 }
@@ -78,10 +87,38 @@ function setupAddQuoteForm() {
     });
 }
 
+function setupCategoryFilter() {
+    const categoryFilterEl = document.getElementById('category-filter');
+    const categories = [...new Set(quotes.map(q => q.category))];
+    categories.forEach(category => {
+        if (category) {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, ' ');
+            categoryFilterEl.appendChild(option);
+        }
+    });
+
+    categoryFilterEl.addEventListener('change', (e) => {
+        activeCategory = e.target.value;
+        generateQuote();
+    });
+}
+
 function generateQuote() {
     if (isAnimating) return;
-    const newQuote = selectNextQuote();
-    if (!newQuote) { quoteTextEl.textContent = "Error loading quote."; quoteAuthorEl.textContent = ""; return; }
+    let newQuote;
+    let attempts = 0;
+    do {
+        newQuote = selectNextQuote();
+        attempts++;
+    } while (newQuote === currentQuote && attempts < 10);
+
+    if (!newQuote) {
+        quoteTextEl.textContent = "Error loading quote.";
+        quoteAuthorEl.textContent = "";
+        return;
+    }
     animateQuoteChange(newQuote);
     generatePattern();
     if (!isTimerPaused) resetTimer();

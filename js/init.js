@@ -1,3 +1,38 @@
+async function loadData() {
+    try {
+        const quotesResponse = await fetch('data/quotes.json');
+        const themesResponse = await fetch('data/themes.json');
+
+        const quotesData = await quotesResponse.json();
+        const themesData = await themesResponse.json();
+
+        // Assuming the quotes array in quotes.js is named 'quotes'
+        // and colorPalettes/fontThemes in themes.js are named as such.
+        // If they are not global, this approach needs adjustment.
+        Array.prototype.push.apply(quotes, quotesData);
+        Object.assign(colorPalettes, themesData.colorPalettes);
+        Object.assign(fontThemes, themesData.fontThemes);
+
+    } catch (error) {
+        console.error("Failed to load data:", error);
+    }
+}
+
+function selectNextQuote() {
+    let eligibleQuotes;
+    if (activeCategory === 'All') {
+        eligibleQuotes = quotes;
+    } else {
+        eligibleQuotes = quotes.filter(q => q.category === activeCategory);
+    }
+
+    if (eligibleQuotes.length === 0) {
+        return { text: "No quotes found in this category.", author: "VibeMe", category: "category_empty" };
+    }
+
+    let randomIndex = Math.floor(Math.random() * eligibleQuotes.length);
+    return eligibleQuotes[randomIndex];
+}
 function init() {
     // Assign DOM elements
     quoteTextEl = document.getElementById('quote-text');
@@ -21,6 +56,7 @@ function init() {
     newQuoteTextEl = document.getElementById('new-quote-text');
     newQuoteAuthorEl = document.getElementById('new-quote-author');
     submitQuoteBtnEl = document.getElementById('submit-quote-btn');
+    const categoryFilterEl = document.getElementById('category-filter');
 
     // Add DOM references for Gemini features here if those features are used
 
@@ -47,10 +83,37 @@ function init() {
         return;
     }
 
-    loadFavorites();
-    loadUserQuotes();
-    activeCategory = 'All';
-    currentQuote = selectNextQuote();
+    loadData().then(() => {
+        loadFavorites();
+        loadUserQuotes();
+        activeCategory = 'All';
+        currentQuote = selectNextQuote();
+
+        if (!currentQuote || currentQuote.category === 'empty' || currentQuote.category === 'category_empty' || currentQuote.category === 'favorites_empty') {
+            quoteTextEl.textContent = currentQuote ? currentQuote.text : "Failed to load quotes.";
+            quoteAuthorEl.textContent = currentQuote ? (currentQuote.author || (currentQuote.category === "favorites_empty" || currentQuote.category === "category_empty" ? "" : "Anonymous")) : "";
+            if (currentQuote) applyThemeStyles(currentQuote.category || 'values');
+            if(countdownEl && countdownEl.parentElement) countdownEl.parentElement.style.display = 'none';
+        } else {
+            applyThemeStyles(currentQuote.category);
+            quoteTextEl.textContent = currentQuote.text;
+            quoteAuthorEl.textContent = currentQuote.author ? `— ${currentQuote.author}` : '— Anonymous';
+            quoteTextEl.dataset.text = currentQuote.text;
+            if (!isTimerPaused) resetTimer();
+        }
+
+        generatePattern();
+        updateSocialLinks();
+        updateFavoriteButtonUI();
+        setupMouseGlow();
+        setupEffectsToggle();
+        setupCopyButton();
+        setupTimerControls();
+        setupFavoriteButton();
+        setupClearFavoritesButton();
+        setupAddQuoteForm();
+        setupCategoryFilter();
+    });
 
     if (!currentQuote || currentQuote.category === 'empty' || currentQuote.category === 'category_empty' || currentQuote.category === 'favorites_empty') {
         quoteTextEl.textContent = currentQuote ? currentQuote.text : "Failed to load quotes.";
@@ -75,6 +138,7 @@ function init() {
     setupFavoriteButton();
     setupClearFavoritesButton();
     setupAddQuoteForm();
+    setupCategoryFilter();
 
     // Add event listeners for Gemini features here when implemented
 

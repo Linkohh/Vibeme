@@ -30,6 +30,12 @@
             <button id="clear-favorites-btn" class="w-full text-sm bg-red-500/80 hover:bg-red-600/80 px-2 py-1.5 rounded">Clear Favorites</button>
         </div>
         <div>
+            <label for="category-filter" class="text-sm">Filter by Category:</label>
+            <select id="category-filter" class="w-full text-black p-1 rounded mt-1">
+                <option value="All">All</option>
+            </select>
+        </div>
+        <div>
             <button id="toggle-add-quote-form" class="w-full text-sm bg-green-500/80 hover:bg-green-600/80 px-2 py-1.5 rounded">Add Quote</button>
             <div id="add-quote-form" class="hidden mt-2 space-y-2">
                 <textarea id="new-quote-text" rows="3" class="w-full text-black p-2 rounded" placeholder="Quote text"></textarea>
@@ -47,6 +53,7 @@
                 <div class="relative z-10">
                     <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 dynamic-text-main heading-font">VibeMe</h1>
                     <div class="quote-animation-container text-center mb-8 min-h-[120px] md:min-h-[150px]">
+                        <div id="loader" class="hidden"></div>
                         <p id="quote-text" class="quote-text-font text-2xl md:text-3xl mb-4 leading-relaxed dynamic-text-main quote-text-animate" aria-live="polite"></p>
                         <p id="quote-author" class="text-lg italic dynamic-text-secondary author-font author-animate" aria-live="polite"></p>
                     </div>
