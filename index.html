@@ -4,78 +4,146 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VibeMe - Motivational Quote Generator</title>
+
+    <!-- Frameworks & libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Dancing+Script:wght@400..700&family=Merriweather:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Slab:wght@400;700&family=Oswald:wght@400;700&family=Montserrat:ital,wght@0,400;0,600;1,400&family=Lato:ital,wght@0,400;0,700;1,400&family=Nunito:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:ital,wght@0,400;0,600;1,400&family=Raleway:ital,wght@0,400;0,600;1,400&family=Roboto+Mono:ital,wght@0,400;0,600;1,400&family=Comfortaa&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body class="min-h-screen flex items-center justify-center p-4 gradient-bg">
-    <div id="mouse-glow" class="mouse-glow"></div>
-    <div id="matrix-bg" class="matrix-bg"></div>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Dancing+Script:wght@400..700&family=Merriweather:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Slab:wght@400;700&family=Oswald:wght@400;700&family=Montserrat:ital,wght@0,400;0,600;1,400&family=Lato:ital,wght@0,400;0,700;1,400&family=Nunito:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:ital,wght@0,400;0,600;1,400&family=Raleway:ital,wght@0,400;0,600;1,400&family=Roboto+Mono:ital,wght@0,400;0,600;1,400&family=Comfortaa&display=swap"
+          rel="stylesheet">
 
-    <div id="settings-toggle" class="fixed top-4 right-4 z-[10001] cursor-pointer p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
+    <!-- Project-specific stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4 gradient-bg">
+    <!-- Decorative background effects -->
+    <div id="mouse-glow"   class="mouse-glow"></div>
+    <div id="matrix-bg"    class="matrix-bg"></div>
+
+    <!-- Settings cog -->
+    <div id="settings-toggle"
+         class="fixed top-4 right-4 z-[10001] cursor-pointer p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm">
         <i class="fas fa-cog text-white text-lg"></i>
     </div>
 
-    <div id="settings-panel" class="hidden fixed top-16 right-4 z-[10000] bg-black/70 backdrop-blur-md p-4 rounded-lg shadow-xl text-white space-y-3 w-60">
-        <div>
-            <label for="effects-toggle-checkbox" class="flex items-center cursor-pointer text-sm">
-                <input type="checkbox" id="effects-toggle-checkbox" class="mr-2 accent-pink-500 h-4 w-4">
-                <span>Visual Effects</span>
-            </label>
-        </div>
-        <div>
-            <button id="clear-favorites-btn" class="w-full text-sm bg-red-500/80 hover:bg-red-600/80 px-2 py-1.5 rounded">Clear Favorites</button>
+    <!-- Settings panel -->
+    <div id="settings-panel"
+         class="hidden fixed top-16 right-4 z-[10000] bg-black/70 backdrop-blur-md p-4 rounded-lg shadow-xl text-white space-y-3 w-60">
+        <label for="effects-toggle-checkbox"
+               class="flex items-center cursor-pointer text-sm">
+            <input type="checkbox" id="effects-toggle-checkbox"
+                   class="mr-2 accent-pink-500 h-4 w-4">
+            <span>Visual Effects</span>
+        </label>
+
+        <button id="clear-favorites-btn"
+                class="w-full text-sm bg-red-500/80 hover:bg-red-600/80 px-2 py-1.5 rounded">
+            Clear Favorites
+        </button>
+
+        <button id="toggle-add-quote-form"
+                class="w-full text-sm bg-green-500/80 hover:bg-green-600/80 px-2 py-1.5 rounded">
+            Add Quote
+        </button>
+
+        <div id="add-quote-form" class="hidden mt-2 space-y-2">
+            <textarea id="new-quote-text" rows="3"
+                      class="w-full text-black p-2 rounded"
+                      placeholder="Quote text"></textarea>
+            <input id="new-quote-author" type="text"
+                   class="w-full text-black p-1 rounded"
+                   placeholder="Author (optional)">
+            <button id="submit-quote-btn"
+                    class="w-full text-sm bg-blue-500/80 hover:bg-blue-600/80 px-2 py-1.5 rounded">
+                Submit
+            </button>
         </div>
     </div>
 
-
+    <!-- Main content -->
     <div class="container mx-auto max-w-4xl relative z-10 pt-8">
         <div class="quote-container-outer">
             <div class="quote-container-inner">
                 <div class="quote-pattern" id="quote-pattern"></div>
                 <div class="relative z-10">
-                    <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 dynamic-text-main heading-font">VibeMe</h1>
-                    <div class="quote-animation-container text-center mb-8 min-h-[120px] md:min-h-[150px]">
-                        <p id="quote-text" class="quote-text-font text-2xl md:text-3xl mb-4 leading-relaxed dynamic-text-main quote-text-animate" aria-live="polite"></p>
-                        <p id="quote-author" class="text-lg italic dynamic-text-secondary author-font author-animate" aria-live="polite"></p>
+                    <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 dynamic-text-main heading-font">
+                        VibeMe
+                    </h1>
+
+                    <div
+                        class="quote-animation-container text-center mb-8 min-h-[120px] md:min-h-[150px]">
+                        <p id="quote-text"
+                           class="quote-text-font text-2xl md:text-3xl mb-4 leading-relaxed dynamic-text-main quote-text-animate"
+                           aria-live="polite"></p>
+                        <p id="quote-author"
+                           class="text-lg italic dynamic-text-secondary author-font author-animate"
+                           aria-live="polite"></p>
                     </div>
 
                     <div class="flex justify-center items-center space-x-3 mb-6 text-xl">
-                        <button id="copy-quote-btn" title="Copy Quote" class="dynamic-text-secondary hover:text-white/80 transition-colors p-2 rounded-full hover:bg-white/10">
+                        <button id="copy-quote-btn" title="Copy Quote"
+                                class="dynamic-text-secondary hover:text-white/80 transition-colors p-2 rounded-full hover:bg-white/10">
                             <i class="fas fa-copy"></i>
                         </button>
-                        <button id="favorite-quote-btn" title="Favorite Quote" class="dynamic-text-secondary hover:text-white/80 transition-colors p-2 rounded-full hover:bg-white/10">
+                        <button id="favorite-quote-btn" title="Favorite Quote"
+                                class="dynamic-text-secondary hover:text-white/80 transition-colors p-2 rounded-full hover:bg-white/10">
                             <i class="far fa-heart"></i>
                         </button>
-                         </div>
+                    </div>
 
                     <div class="flex flex-col items-center space-y-6">
                         <button id="generate-btn" class="generate-btn font-semibold">
                             <i class="fas fa-sync-alt"></i>
                             <span class="text-sm">New Vibe</span>
                         </button>
+
                         <div class="flex items-center dynamic-text-secondary text-sm space-x-3">
-                            <button id="timer-toggle-btn" title="Pause/Resume Timer" class="hover:text-white/80 transition-colors">
+                            <button id="timer-toggle-btn" title="Pause/Resume Timer"
+                                    class="hover:text-white/80 transition-colors">
                                 <i class="fas fa-pause"></i>
                             </button>
-                            <span>New quote in <span id="countdown">10</span>s</span>
+                            <span>New quote in
+                                <span id="countdown">10</span>s
+                            </span>
                         </div>
-                        <div class="flex space-x-3 md:space-x-4 mt-6"> <a href="#" id="twitter-share" target="_blank" rel="noopener noreferrer" class="social-bubble"><i class="fab fa-twitter"></i></a>
-                            <a href="#" id="facebook-share" target="_blank" rel="noopener noreferrer" class="social-bubble"><i class="fab fa-facebook-f"></i></a>
-                            <a href="#" id="linkedin-share" target="_blank" rel="noopener noreferrer" class="social-bubble"><i class="fab fa-linkedin-in"></i></a>
-                            <a href="#" id="whatsapp-share" target="_blank" rel="noopener noreferrer" class="social-bubble"><i class="fab fa-whatsapp"></i></a>
-                            <a href="#" id="pinterest-share" target="_blank" rel="noopener noreferrer" class="social-bubble"><i class="fab fa-pinterest-p"></i></a>
+
+                        <!-- Social share buttons -->
+                        <div class="flex space-x-3 md:space-x-4 mt-6">
+                            <a href="#" id="twitter-share"  target="_blank" rel="noopener noreferrer"
+                               class="social-bubble"><i class="fab fa-twitter"></i></a>
+                            <a href="#" id="facebook-share" target="_blank" rel="noopener noreferrer"
+                               class="social-bubble"><i class="fab fa-facebook-f"></i></a>
+                            <a href="#" id="linkedin-share" target="_blank" rel="noopener noreferrer"
+                               class="social-bubble"><i class="fab fa-linkedin-in"></i></a>
+                            <a href="#" id="whatsapp-share" target="_blank" rel="noopener noreferrer"
+                               class="social-bubble"><i class="fab fa-whatsapp"></i></a>
+                            <a href="#" id="pinterest-share" target="_blank" rel="noopener noreferrer"
+                               class="social-bubble"><i class="fab fa-pinterest-p"></i></a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <p id="copy-feedback" class="text-center text-sm dynamic-text-secondary mt-3 h-4"></p>
+        <p id="copy-feedback"
+           class="text-center text-sm dynamic-text-secondary mt-3 h-4"></p>
     </div>
 
-    <script src="app.js"></script>
+    <!-- Modular JS bundle -->
+    <script src="js/config.js"></script>
+    <script src="js/quotes.js"></script>
+    <script src="js/themes.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/effects.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/listeners.js"></script>
+    <script src="js/init.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
