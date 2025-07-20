@@ -1068,13 +1068,54 @@ const VibeMe = {
             this.matrixState.resizeHandler = null;
         }
         
-        // Clean up all active columns
+        // Clean up all active columns with proper event listener removal
         this.matrixState.activeColumns.forEach(column => {
-            if (column && column.parentNode) {
-                column.parentNode.removeChild(column);
+            if (column) {
+                try {
+                    // Remove event listeners
+                    if (column._animationEndHandler) {
+                        column.removeEventListener('animationend', column._animationEndHandler);
+                        column._animationEndHandler = null;
+                    }
+                    // Remove from DOM
+                    if (column.parentNode) {
+                        column.parentNode.removeChild(column);
+                    }
+                } catch (error) {
+                    console.warn('🔴 MATRIX: Error cleaning up column:', error);
+                }
             }
         });
         this.matrixState.activeColumns = [];
+    },
+
+    // Helper function to clean up matrix column event listeners
+    cleanupColumnEventListeners: function(column) {
+        if (!column) return;
+        
+        // Remove existing animationend listeners by cloning the element
+        // This is the most reliable way to remove all event listeners
+        const clonedColumn = column.cloneNode(true);
+        if (column.parentNode) {
+            column.parentNode.replaceChild(clonedColumn, column);
+        }
+        return clonedColumn;
+    },
+
+    // Setup event listener for matrix column animation recycling
+    setupColumnAnimationListener: function(column) {
+        if (!column) return;
+        
+        // Create a named function for better memory management
+        const animationEndHandler = () => {
+            if (this.state.effectsEnabled && column.parentNode) {
+                this.recycleMatrixColumn(column);
+            }
+        };
+        
+        // Store the handler reference for potential cleanup
+        column._animationEndHandler = animationEndHandler;
+        column.addEventListener('animationend', animationEndHandler);
     },
 
     createMatrixColumns: function() {
@@ -1112,31 +1153,48 @@ const VibeMe = {
         // Fade in the column
         requestAnimationFrame(() => setTimeout(() => column.classList.add('visible'), 10));
         
-        // Add recycle listener
-        column.addEventListener('animationend', () => this.recycleMatrixColumn(column));
+        // Setup clean event listener for animation recycling
+        this.setupColumnAnimationListener(column);
     },
 
     recycleMatrixColumn: function(column) {
-        if (!this.state.effectsEnabled) return;
+        if (!this.state.effectsEnabled || !column || !column.parentNode) return;
+        
+        // Clean up existing event listeners before recycling
+        const cleanedColumn = this.cleanupColumnEventListeners(column);
+        
+        // Update the reference in activeColumns array
+        const columnIndex = this.matrixState.activeColumns.indexOf(column);
+        if (columnIndex !== -1) {
+            this.matrixState.activeColumns[columnIndex] = cleanedColumn;
+        }
         
         // Set new horizontal position
-        column.style.left = `${Math.random() * 100}%`;
+        cleanedColumn.style.left = `${Math.random() * 100}%`;
         
         // Generate new matrix content
-        column.innerHTML = this.generateMatrixContent();
+        cleanedColumn.innerHTML = this.generateMatrixContent();
         
         // Apply position-based gradient color
-        this.applyMatrixThemeColors(column);
+        this.applyMatrixThemeColors(cleanedColumn);
         
         // Set new animation duration and delay
         const duration = 12 + Math.random() * 8; // 12-20 seconds
         const delay = Math.random() * 4; // 0-4 seconds
         
         // Reset and restart animation
-        column.style.animation = 'none';
+        cleanedColumn.style.animation = 'none';
         requestAnimationFrame(() => {
-            column.style.animation = `fall ${duration}s linear ${delay}s`;
+            cleanedColumn.style.animation = `fall ${duration}s linear ${delay}s`;
         });
+        
+        // Setup fresh event listener for the next cycle
+        this.setupColumnAnimationListener(cleanedColumn);
+        
+        // Debug logging for monitoring matrix recycling
+        if (Math.random() < 0.1) { // Only log 10% of the time to avoid spam
+            console.log('🔄 MATRIX: Column recycled successfully, active columns:', this.matrixState.activeColumns.length);
+        }
     },
 
     generateMatrixContent: function() {
@@ -1173,9 +1231,19 @@ const VibeMe = {
 
     removeSingleMatrixColumn: function() {
         if (this.matrixState.activeColumns.length === 0) return;
+        
         const column = this.matrixState.activeColumns.pop();
         if (column && column.parentNode) {
-            column.parentNode.removeChild(column);
+            try {
+                // Clean up event listeners before removal
+                if (column._animationEndHandler) {
+                    column.removeEventListener('animationend', column._animationEndHandler);
+                    column._animationEndHandler = null;
+                }
+                column.parentNode.removeChild(column);
+            } catch (error) {
+                console.warn('🔴 MATRIX: Error removing column:', error);
+            }
         }
     },
 
