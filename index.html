@@ -77,6 +77,7 @@
     <!-- Decorative background effects -->
     <div id="mouse-glow" class="mouse-glow" aria-hidden="true"></div>
     <div id="matrix-bg" class="matrix-bg" aria-hidden="true"></div>
+    <canvas id="matrix-canvas" class="matrix-canvas" aria-hidden="true"></canvas>
 
     <!-- Top controls -->
     <div class="fixed top-4 right-4 z-[10001] flex space-x-2">
@@ -210,6 +211,243 @@
                         disabled>
                     Add Quote
                 </button>
+            </div>
+
+            <!-- Color Customization Controls -->
+            <div id="color-controls" class="space-y-3 border-t border-gray-600 pt-3">
+                <h3 class="text-sm font-semibold text-gray-200">🎨 Color Customization</h3>
+                
+                <!-- Color Harmony Selector -->
+                <div class="space-y-2">
+                    <label for="harmony-type" class="text-xs text-gray-300">Color Harmony</label>
+                    <select id="harmony-type" 
+                            class="w-full text-black p-1 rounded text-xs">
+                        <option value="auto">🎲 Auto (Intelligent)</option>
+                        <option value="analogous">🌊 Analogous (Peaceful)</option>
+                        <option value="triadic">⚡ Triadic (Energetic)</option>
+                        <option value="complementary">🔥 Complementary (Bold)</option>
+                        <option value="split-complementary">🌟 Split-Complementary</option>
+                        <option value="monochromatic">🎯 Monochromatic (Subtle)</option>
+                        <option value="vibrant">💎 Vibrant (Dynamic)</option>
+                    </select>
+                </div>
+
+                <!-- Vibrancy Control -->
+                <div class="space-y-2">
+                    <label for="vibrancy-slider" class="flex items-center justify-between text-xs">
+                        <span>Vibrancy</span>
+                        <span id="vibrancy-value">70%</span>
+                    </label>
+                    <input type="range" 
+                           id="vibrancy-slider" 
+                           min="0" 
+                           max="100" 
+                           value="70"
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                    <p class="text-xs text-gray-400">Controls color saturation intensity</p>
+                </div>
+
+                <!-- Warmth Control -->
+                <div class="space-y-2">
+                    <label for="warmth-slider" class="flex items-center justify-between text-xs">
+                        <span>Warmth</span>
+                        <span id="warmth-value">50%</span>
+                    </label>
+                    <input type="range" 
+                           id="warmth-slider" 
+                           min="0" 
+                           max="100" 
+                           value="50"
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500">
+                    <p class="text-xs text-gray-400">Cool colors ← → Warm colors</p>
+                </div>
+
+                <!-- Base Color Picker -->
+                <div class="space-y-2">
+                    <label for="base-color-picker" class="text-xs text-gray-300">Base Color (Optional)</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="color" 
+                               id="base-color-picker" 
+                               class="w-8 h-8 rounded cursor-pointer">
+                        <button id="random-color-btn"
+                                class="flex-1 text-xs bg-purple-500/80 hover:bg-purple-600/80 px-2 py-1 rounded transition-colors">
+                            🎲 Random
+                        </button>
+                        <button id="clear-base-color-btn"
+                                class="flex-1 text-xs bg-gray-500/80 hover:bg-gray-600/80 px-2 py-1 rounded transition-colors">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Accessibility Toggle -->
+                <div class="space-y-2">
+                    <label for="accessibility-mode" class="flex items-center cursor-pointer text-xs">
+                        <input type="checkbox" 
+                               id="accessibility-mode"
+                               class="mr-2 accent-green-500 h-3 w-3"
+                               checked>
+                        <span>♿ Accessibility Mode</span>
+                    </label>
+                    <p class="text-xs text-gray-400">Ensures WCAG contrast compliance</p>
+                </div>
+
+                <!-- Matrix Visibility -->
+                <div class="space-y-2">
+                    <label for="matrix-opacity" class="flex items-center justify-between text-xs">
+                        <span>Matrix Visibility</span>
+                        <span id="matrix-opacity-value">80%</span>
+                    </label>
+                    <input type="range" 
+                           id="matrix-opacity" 
+                           min="0" 
+                           max="100" 
+                           value="80"
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500">
+                </div>
+
+                <!-- Advanced Matrix Controls -->
+                <div class="space-y-3 border-t border-gray-600 pt-3">
+                    <h4 class="text-xs font-semibold text-gray-200">🔮 Advanced Matrix</h4>
+                    
+                    <!-- Matrix Intensity -->
+                    <div class="space-y-2">
+                        <label for="matrix-intensity" class="flex items-center justify-between text-xs">
+                            <span>Matrix Intensity</span>
+                            <span id="matrix-intensity-value">100%</span>
+                        </label>
+                        <input type="range" 
+                               id="matrix-intensity" 
+                               min="50" 
+                               max="200" 
+                               value="100"
+                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                        <p class="text-xs text-gray-400">Controls glow strength and pop effect</p>
+                    </div>
+
+                    <!-- Animation Speed -->
+                    <div class="space-y-2">
+                        <label for="matrix-speed" class="flex items-center justify-between text-xs">
+                            <span>Animation Speed</span>
+                            <span id="matrix-speed-value">1.0x</span>
+                        </label>
+                        <input type="range" 
+                               id="matrix-speed" 
+                               min="0.5" 
+                               max="2.0" 
+                               step="0.1"
+                               value="1.0"
+                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500">
+                        <p class="text-xs text-gray-400">Slower = more readable, Faster = more dynamic</p>
+                    </div>
+
+                    <!-- Contrast Boost -->
+                    <div class="space-y-2">
+                        <label for="matrix-high-contrast" class="flex items-center cursor-pointer text-xs">
+                            <input type="checkbox" 
+                                   id="matrix-high-contrast"
+                                   class="mr-2 accent-red-500 h-3 w-3">
+                            <span>🔥 High Contrast Mode</span>
+                        </label>
+                        <p class="text-xs text-gray-400">Forces maximum visibility on any background</p>
+                    </div>
+
+                    <!-- Blend Mode Override -->
+                    <div class="space-y-2">
+                        <label for="matrix-blend-mode" class="text-xs text-gray-300">Blend Mode</label>
+                        <select id="matrix-blend-mode" 
+                                class="w-full text-black p-1 rounded text-xs">
+                            <option value="auto">🎯 Auto (Intelligent)</option>
+                            <option value="dark-bg">🌟 Screen (Classic Glow)</option>
+                            <option value="light-bg">⚫ Multiply (Sharp Dark)</option>
+                            <option value="high-contrast">🔥 Difference (Maximum Pop)</option>
+                        </select>
+                        <p class="text-xs text-gray-400">Manual override for blend effects</p>
+                    </div>
+
+                    <!-- Stream Density -->
+                    <div class="space-y-2">
+                        <label for="matrix-density" class="flex items-center justify-between text-xs">
+                            <span>Stream Density</span>
+                            <span id="matrix-density-value">1.5x</span>
+                        </label>
+                        <input type="range" 
+                               id="matrix-density" 
+                               min="0.5" 
+                               max="3.0" 
+                               step="0.1"
+                               value="1.5"
+                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                        <p class="text-xs text-gray-400">Balance visual impact vs. performance</p>
+                    </div>
+
+                    <!-- Rendering Mode -->
+                    <div class="space-y-2 border-t border-gray-700 pt-3">
+                        <label for="matrix-render-mode" class="text-xs text-gray-300">🎮 Rendering Engine</label>
+                        <select id="matrix-render-mode" 
+                                class="w-full text-black p-1 rounded text-xs">
+                            <option value="dom">🏠 DOM (Classic)</option>
+                            <option value="canvas">🎨 Canvas (Performance)</option>
+                            <option value="hybrid">⚡ Hybrid (Best of Both)</option>
+                        </select>
+                        <p class="text-xs text-gray-400">Canvas = smoother, DOM = compatible</p>
+                    </div>
+
+                    <!-- Canvas Performance -->
+                    <div id="canvas-performance-settings" class="space-y-2 hidden">
+                        <h5 class="text-xs font-medium text-cyan-300">Canvas Performance</h5>
+                        
+                        <div class="space-y-2">
+                            <label for="canvas-max-fps" class="flex items-center justify-between text-xs">
+                                <span>Max FPS</span>
+                                <span id="canvas-max-fps-value">60</span>
+                            </label>
+                            <input type="range" 
+                                   id="canvas-max-fps" 
+                                   min="30" 
+                                   max="120" 
+                                   step="15"
+                                   value="60"
+                                   class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500">
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="canvas-adaptive-performance" class="flex items-center cursor-pointer text-xs">
+                                <input type="checkbox" 
+                                       id="canvas-adaptive-performance"
+                                       class="mr-2 accent-cyan-500 h-3 w-3"
+                                       checked>
+                                <span>🧠 Adaptive Performance</span>
+                            </label>
+                            <p class="text-xs text-gray-400">Auto-adjusts quality based on device performance</p>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="canvas-memory-management" class="flex items-center cursor-pointer text-xs">
+                                <input type="checkbox" 
+                                       id="canvas-memory-management"
+                                       class="mr-2 accent-cyan-500 h-3 w-3"
+                                       checked>
+                                <span>🧹 Memory Management</span>
+                            </label>
+                            <p class="text-xs text-gray-400">Prevents memory leaks with cleanup cycles</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Color Preview -->
+                <div class="space-y-2">
+                    <label class="text-xs text-gray-300">Color Preview</label>
+                    <div class="flex space-x-1 h-8 rounded overflow-hidden">
+                        <div id="color-preview-1" class="flex-1 bg-purple-500"></div>
+                        <div id="color-preview-2" class="flex-1 bg-blue-500"></div>
+                        <div id="color-preview-3" class="flex-1 bg-teal-500"></div>
+                    </div>
+                    <button id="apply-colors-btn"
+                            class="w-full text-xs bg-indigo-500/80 hover:bg-indigo-600/80 px-2 py-1.5 rounded transition-colors">
+                        ✨ Apply New Colors
+                    </button>
+                </div>
             </div>
         </div>
     </div>
