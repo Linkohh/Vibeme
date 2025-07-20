@@ -205,6 +205,41 @@ body:not(.using-keyboard) *:focus {
     100% { background-position: 0% 50%; }
 }
 
+@keyframes matrix-fall {
+    0% { 
+        top: -100vh; 
+        opacity: 0; 
+    }
+    10% { 
+        opacity: 1; 
+    }
+    90% { 
+        opacity: 0.7; 
+    }
+    100% { 
+        top: 100vh; 
+        opacity: 0; 
+    }
+}
+
+/* Bidirectional matrix effect - upward movement */
+@keyframes matrix-rise {
+    0% { 
+        top: 100vh; 
+        opacity: 0; 
+    }
+    10% { 
+        opacity: 1; 
+    }
+    90% { 
+        opacity: 0.7; 
+    }
+    100% { 
+        top: -100vh; 
+        opacity: 0; 
+    }
+}
+
 /* ===== QUOTE TEXT ANIMATIONS ===== */
 .quote-animation-container {
     perspective: 1000px;
@@ -592,7 +627,20 @@ body:not(.dark-mode) .mouse-glow {
     overflow: hidden; 
     opacity: 0.7; /* Slightly transparent for layered look */
     background: rgba(0, 0, 0, 0.1);
-    mix-blend-mode: screen; /* Creates interesting color effects */
+    /* Mix blend mode is now dynamic - set by JavaScript */
+}
+
+/* Canvas matrix effect - layered above DOM matrix */
+.matrix-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: calc(var(--z-negative) + 1); /* Above DOM matrix but below content */
+    pointer-events: none; /* Allow interaction with elements below */
+    opacity: 0.8; /* Slightly more visible than DOM matrix */
+    display: none; /* Hidden by default, shown when canvas mode is active */
 }
 
 /* Individual column of falling characters */
@@ -602,18 +650,31 @@ body:not(.dark-mode) .mouse-glow {
     width: 16px; 
     font-family: 'Roboto Mono', 'Courier New', 'Monaco', 'Menlo', monospace; 
     font-size: 14px;
-    line-height: 0.9;
-    font-weight: 400;
+    line-height: 1.1;
+    font-weight: bold;
     color: rgba(0, 255, 0, 0.9); /* Fallback green color */
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.7); /* Fallback glow */
     
-    /* The 'fall' animation - NOT set to infinite, recycled by JavaScript */
-    animation: fall linear; 
-    will-change: transform; /* Performance optimization */
+    /* Enhanced text rendering for crisp characters */
+    text-rendering: optimizeSpeed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    
+    /* Performance optimizations */
+    transform: translateZ(0); /* Force GPU acceleration */
+    backface-visibility: hidden;
+    will-change: transform, opacity;
+    
+    pointer-events: none;
+    user-select: none;
+    overflow: hidden;
+    
+    /* Matrix column specific */
     display: block;
     text-align: center; 
     opacity: 0;
-    transition: opacity 0.5s ease;
+    transition: opacity 0.3s ease;
+    letter-spacing: 0px;
 }
 
 /* Class to make column visible after creation */
@@ -636,9 +697,65 @@ body:not(.dark-mode) .mouse-glow {
 
 /* ===== EFFECTS DISABLED STATE ===== */
 body.effects-disabled .mouse-glow,
-body.effects-disabled .matrix-bg {
+body.effects-disabled .matrix-bg,
+body.effects-disabled .matrix-canvas {
     display: none !important;
 }
+
+/* ===== INTELLIGENT MATRIX BLEND MODES ===== */
+
+/* Dark backgrounds - use screen blend mode for classic glow effect */
+.matrix-mode-dark-bg .binary-column {
+    mix-blend-mode: screen;
+    /* Enhanced multi-layer text shadow for dark backgrounds */
+    text-shadow: 
+        0 0 1px rgba(255, 255, 255, 0.9),    /* Sharp white corona for definition */
+        0 0 3px currentColor,                 /* Main color glow */
+        0 0 8px currentColor,                 /* Extended glow */
+        0 0 15px currentColor;                /* Outer halo */
+}
+
+/* Light backgrounds - use multiply blend mode for sharp contrast */
+.matrix-mode-light-bg .binary-column {
+    mix-blend-mode: multiply;
+    /* Enhanced multi-layer text shadow for light backgrounds */
+    text-shadow: 
+        0 0 1px rgba(0, 0, 0, 0.8),          /* Dark outline for definition */
+        0 0 2px currentColor,                 /* Subtle color glow */
+        0 0 4px currentColor,                 /* Medium glow */
+        1px 1px 2px rgba(0, 0, 0, 0.3);      /* Backdrop shadow for separation */
+}
+
+/* High contrast mode - forces maximum visibility */
+.matrix-mode-high-contrast .binary-column {
+    mix-blend-mode: difference;
+    font-weight: bold;
+    text-shadow: 
+        0 0 1px rgba(255, 255, 255, 1),      /* Strong white outline */
+        0 0 3px currentColor,                 /* Strong color glow */
+        0 0 6px currentColor,                 /* Extended strong glow */
+        0 0 12px currentColor,                /* Maximum outer glow */
+        2px 2px 4px rgba(0, 0, 0, 0.5);      /* Strong backdrop shadow */
+}
+
+/* Leading character highlight system */
+.matrix-head {
+    color: rgba(255, 255, 255, 0.95) !important;
+    font-weight: bold;
+    text-shadow: 
+        0 0 2px rgba(255, 255, 255, 1),      /* Intense white corona */
+        0 0 6px currentColor,                 /* Bright main glow */
+        0 0 12px currentColor,                /* Extended bloom */
+        0 0 20px currentColor,                /* Maximum bloom effect */
+        0 0 30px rgba(255, 255, 255, 0.3);   /* Soft outer halo */
+}
+
+/* Trailing characters with fade effect */
+.matrix-trail-1 { opacity: 0.8; }
+.matrix-trail-2 { opacity: 0.6; }
+.matrix-trail-3 { opacity: 0.4; }
+.matrix-trail-4 { opacity: 0.2; }
+.matrix-trail-5 { opacity: 0.1; }
 
 /* ===== BUTTONS & INTERACTIVE ELEMENTS ===== */
 button {
@@ -822,6 +939,7 @@ button:disabled {
 @media print {
     .mouse-glow,
     .matrix-bg,
+    .matrix-canvas,
     .generate-btn,
     .social-bubble,
     #settings-toggle,
