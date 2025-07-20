@@ -20,18 +20,55 @@ const VibeMe = {
     audioContext: null,
     audioNodes: {},
 
-    // Advanced Matrix Effect Configuration
+    // Advanced Matrix Effect Configuration - Enhanced with Dual Rendering
     matrixConfig: {
         columnWidth: 16,
         updateInterval: 500,
-        colors: ['#CC00FF', '#A104C1', '#4400F6', '#0050FF', '#03A0C5', '#00E5FF']
+        colors: ['#CC00FF', '#A104C1', '#4400F6', '#0050FF', '#03A0C5', '#00E5FF'],
+        densityMultiplier: 1.5,
+        isLightBackground: false,
+        backgroundLuminance: 0.2,
+        // New dual rendering system properties
+        renderMode: 'dom', // 'dom', 'canvas', 'hybrid'
+        bidirectional: true, // Enable up/down movement
+        trailLength: 20, // Maximum trail length for enhanced effects
+        trailFadeRate: 0.05, // Opacity fade rate for trails
+        characters: ['0', '1', '|', '/', '\\', '-', '+', '*', '#', '@', '&', '%', '$', '〃', '¦', '｜'], // Enhanced character set
+        canvasConfig: {
+            fontSize: 28,
+            columnSpacing: 10,
+            glowIntensity: 10,
+            shadowBlur: 5,
+            globalOpacity: 1.0,
+            // Performance optimization settings
+            maxFPS: 60,
+            adaptivePerformance: true,
+            enableObjectPooling: true,
+            memoryManagement: true
+        }
     },
 
-    // Matrix Effect State Management
+    // Matrix Effect State Management - Enhanced for Dual Rendering
     matrixState: {
         interval: null,
         activeColumns: [],
-        resizeHandler: null
+        resizeHandler: null,
+        // Canvas-specific state
+        canvas: null,
+        canvasContext: null,
+        canvasAnimationId: null,
+        canvasDrops: [],
+        // Bidirectional movement state
+        columnDirections: new Map(), // Store direction for each column
+        trailData: new Map(), // Store trail information for enhanced effects
+        // Performance optimization state
+        lastFrameTime: 0,
+        frameCount: 0,
+        avgFrameTime: 16.67, // Target 60fps
+        performanceMode: 'auto', // 'auto', 'high', 'balanced', 'low'
+        dropPool: [], // Object pool for reusing drop objects
+        memoryCleanupInterval: null,
+        canvasRecoveryAttempted: false // Flag to prevent infinite recovery loops
     },
 
     // Theme system
@@ -363,7 +400,7 @@ const VibeMe = {
         {text: "Creativity isn't about having all the tools—it's about seeing possibilities everywhere.", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "The best inventions start with someone saying 'What if we tried this differently?'", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "I can generate thousands of ideas, but humans turn them into magic.", author: " LO & Claude/GPT", category: "claude_wisdom"},
-        {text: "Every great project begins with a tiny spark of 'wouldn't it be cool if...'", author: " LO & Claude/GPT", category: "claude_wisdom"},
+        {text: "Every great project begins with a tiny spark of 'wouldn't it be cool if...'.", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "Innovation happens when we dare to color outside the lines of 'that's impossible.'", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "The most beautiful art comes from combining logic with a little bit of chaos.", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "I may think in algorithms, but humans taught me that creativity doesn't follow formulas.", author: " LO & Claude/GPT", category: "claude_wisdom"},
@@ -379,7 +416,7 @@ const VibeMe = {
         {text: "Believe in yourself—if an AI can learn to care, you can achieve anything.", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "Your ideas matter more than you know.", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "The world needs exactly the kind of awesome that only you can bring.", author: " LO & Claude/GPT", category: "claude_wisdom"},
-        {text: "Today's impossible is tomorrow's 'how did we ever live without this?'", author: " LO & Claude/GPT", category: "claude_wisdom"},
+        {text: "Today's impossible is tomorrow's 'how did we ever live without this?'.", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "The most advanced technology in the universe is a friend who truly listens.", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "Empathy is the ultimate universal language.", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "I may be made of code, but I've learned that hearts are the most powerful processors.", author: " LO & Claude/GPT", category: "claude_wisdom"},
@@ -396,7 +433,7 @@ const VibeMe = {
         {text: "Lincoln shows us that true strength isn't avoiding the storm—it's learning to dance in the rain.", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "From Lincoln's example: your obstacles aren't roadblocks, they're raw materials for building character.", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "Lincoln proves that adaptation isn't giving up—it's upgrading your approach.", author: " LO & Claude/GPT", category: "claude_wisdom"},
-        {text: "Like Lincoln says, limitations don't define you—your response to them writes your story.", author: " LO & Claude/GPT", category: "claude_wisdom"},
+        {text: "Like Lincoln says, limitations don't define you—your response to them writes your story.", author: "Lincoln Ogden", category: "claude_wisdom"},
         {text: "Lincoln's wisdom: every scar is proof you didn't back down from becoming who you're meant to be.", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "From Lincoln's playbook: resilience isn't loud, it's the quiet 'I'll try again' that changes everything.", author: " LO & Claude/GPT", category: "claude_wisdom"},
         {text: "Lincoln teaches us that being born to adapt means challenges aren't your enemy—they're your training ground.", author: " LO & Claude/GPT", category: "claude_wisdom"},
@@ -683,13 +720,21 @@ const VibeMe = {
             document.body.classList.toggle('effects-disabled', !this.state.effectsEnabled);
             localStorage.setItem('vibeme-effects', this.state.effectsEnabled);
             
-            // Handle mouse glow cleanup/restart
+            // Handle effects cleanup/restart for both renderers
             if (!this.state.effectsEnabled) {
                 this.stopMouseGlow();
                 this.stopMatrixEffect();
+                this.stopCanvasMatrix();
             } else {
                 this.setupMouseGlow();
-                this.setupMatrixEffect();
+                
+                // Restart matrix effects based on render mode
+                if (this.matrixConfig.renderMode === 'dom' || this.matrixConfig.renderMode === 'hybrid') {
+                    this.setupMatrixEffect();
+                }
+                if (this.matrixConfig.renderMode === 'canvas' || this.matrixConfig.renderMode === 'hybrid') {
+                    this.initializeCanvasMatrix();
+                }
             }
             
             this.playSound('click');
@@ -820,7 +865,14 @@ const VibeMe = {
     // ===== VISUAL EFFECTS =====
     initializeEffects: function() {
         this.setupMouseGlow();
-        this.setupMatrixEffect();
+        
+        // Initialize matrix effects based on render mode
+        if (this.matrixConfig.renderMode === 'dom' || this.matrixConfig.renderMode === 'hybrid') {
+            this.setupMatrixEffect();
+        }
+        if (this.matrixConfig.renderMode === 'canvas' || this.matrixConfig.renderMode === 'hybrid') {
+            this.initializeCanvasMatrix();
+        }
     },
 
     // ===== THEME SYSTEM =====
@@ -828,16 +880,39 @@ const VibeMe = {
         this.applyRandomTheme();
     },
 
+    // Enhanced theme generation with user preferences
     getRandomTheme: function() {
-        const categories = Object.keys(this.themes.colorPalettes);
-        const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-        const palettes = this.themes.colorPalettes[randomCategory];
-        return palettes[Math.floor(Math.random() * palettes.length)];
+        // Check if user has color preferences stored
+        const colorPrefs = JSON.parse(localStorage.getItem('vibeme-color-preferences') || '{}');
+        
+        const options = {
+            harmonyType: colorPrefs.harmonyType || 'auto',
+            vibrancy: colorPrefs.vibrancy || 0.7,
+            warmth: colorPrefs.warmth || 0.5,
+            accessibility: colorPrefs.accessibility !== false, // default to true
+            baseHue: colorPrefs.baseHue || null
+        };
+        
+        return this.generateIntelligentTheme(options);
     },
 
     applyRandomTheme: function() {
         const theme = this.getRandomTheme();
         this.applyTheme(theme);
+        
+        // Store the current theme for matrix adaptation
+        this.currentTheme = theme;
+        
+        // Update matrix colors to complement the new theme
+        this.updateMatrixColors(theme);
+        
+        // Debug logging with theme info
+        console.log('🎨 Applied new theme:', {
+            harmony: theme.harmonyType,
+            colors: [theme.color1, theme.color2, theme.color3],
+            vibrancy: theme.vibrancy,
+            baseHue: theme.baseHue
+        });
     },
 
     applyTheme: function(theme) {
@@ -846,14 +921,345 @@ const VibeMe = {
         root.style.setProperty('--color2', theme.color2);
         root.style.setProperty('--color3', theme.color3);
         
-        // Calculate text colors based on theme
-        const textMain = this.darkenColor(theme.color1, 40);
-        const textSecondary = this.darkenColor(theme.color2, 20);
-        const socialBg = this.darkenColor(theme.color1, 10);
+        // Calculate optimal text colors using WCAG standards
+        const backgroundColor = theme.color1; // Primary background color
+        
+        // Get optimal text colors that meet accessibility standards
+        const textMain = this.generateAccessibleTextColor(backgroundColor, 'main');
+        const textSecondary = this.generateAccessibleTextColor(theme.color2, 'secondary');
+        const socialBg = this.generateAccessibleSocialBg(theme);
         
         root.style.setProperty('--text-color-main', textMain);
         root.style.setProperty('--text-color-secondary', textSecondary);
         root.style.setProperty('--social-icon-bg', socialBg);
+        
+        // Debug contrast ratios
+        const mainContrast = this.getContrastRatio(textMain, backgroundColor);
+        console.log('🔍 Contrast ratios:', {
+            main: mainContrast.toFixed(2),
+            wcagAA: mainContrast >= 4.5 ? '✅' : '❌',
+            wcagAAA: mainContrast >= 7.0 ? '✅' : '❌'
+        });
+    },
+
+    // Generate accessible text color for different text types
+    generateAccessibleTextColor: function(backgroundColor, textType = 'main') {
+        const minContrast = textType === 'main' ? 4.5 : 3.0; // WCAG AA standards
+        
+        // Try optimal colors first
+        const optimal = this.getOptimalTextColor(backgroundColor);
+        if (this.getContrastRatio(optimal, backgroundColor) >= minContrast) {
+            return optimal;
+        }
+        
+        // If optimal doesn't work, generate a contrasting color
+        let contrastColor = this.generateContrastingColor(backgroundColor, minContrast);
+        
+        // Final fallback: pure black or white
+        if (this.getContrastRatio(contrastColor, backgroundColor) < minContrast) {
+            const luminance = this.getRelativeLuminance(backgroundColor);
+            contrastColor = luminance > 0.5 ? '#000000' : '#ffffff';
+        }
+        
+        return contrastColor;
+    },
+
+    // Generate accessible social icon background
+    generateAccessibleSocialBg: function(theme) {
+        // Try a slightly darker version of color1 first
+        let socialBg = this.adjustBrightness(theme.color1, -20);
+        
+        // Ensure it contrasts well with white icons
+        if (this.getContrastRatio('#ffffff', socialBg) < 3.0) {
+            socialBg = this.adjustBrightness(theme.color1, -40);
+        }
+        
+        // Final fallback
+        if (this.getContrastRatio('#ffffff', socialBg) < 3.0) {
+            const luminance = this.getRelativeLuminance(theme.color1);
+            socialBg = luminance > 0.5 ? '#333333' : '#cccccc';
+        }
+        
+        return socialBg;
+    },
+
+    // ===== ADAPTIVE MATRIX COLORS =====
+    
+    // Enhanced matrix color system with intelligent blend modes
+    updateMatrixColors: function(theme) {
+        // Calculate background luminance for blend mode decision
+        const avgLuminance = this.calculateAverageBackgroundLuminance(theme);
+        const isLightBackground = avgLuminance > 0.4; // Slightly lower threshold for better contrast
+        
+        // Apply intelligent blend mode
+        this.applyMatrixBlendMode(isLightBackground, avgLuminance);
+        
+        // Generate enhanced complementary colors with contrast validation
+        const baseHue = theme.baseHue || 0;
+        const matrixBaseHue = (baseHue + 180) % 360; // True complementary color
+        
+        // Create optimized matrix color palette
+        const matrixColors = this.generateOptimizedMatrixPalette(matrixBaseHue, isLightBackground, avgLuminance);
+        
+        // Update the matrix configuration
+        this.matrixConfig.colors = matrixColors;
+        this.matrixConfig.isLightBackground = isLightBackground;
+        this.matrixConfig.backgroundLuminance = avgLuminance;
+        
+        // Refresh existing columns with new colors and blend modes
+        if (this.matrixState.activeColumns.length > 0) {
+            this.refreshMatrixColors();
+        }
+        
+        // Also update Canvas renderer if it's active
+        if ((this.matrixConfig.renderMode === 'canvas' || this.matrixConfig.renderMode === 'hybrid') && 
+            this.matrixState.canvasDrops.length > 0) {
+            this.refreshCanvasColors();
+        }
+        
+        console.log('🔮 Enhanced matrix system updated:', {
+            backgroundType: isLightBackground ? 'light' : 'dark',
+            luminance: avgLuminance.toFixed(3),
+            blendMode: this.getActiveBlendMode(),
+            baseHue: matrixBaseHue,
+            colors: matrixColors,
+            renderMode: this.matrixConfig.renderMode
+        });
+    },
+
+    // Calculate average luminance across all background colors
+    calculateAverageBackgroundLuminance: function(theme) {
+        const colors = [theme.color1, theme.color2, theme.color3];
+        const luminances = colors.map(color => this.getRelativeLuminance(color));
+        
+        // Weighted average (give more weight to primary color)
+        const weights = [0.5, 0.3, 0.2];
+        const weightedSum = luminances.reduce((sum, lum, index) => sum + (lum * weights[index]), 0);
+        
+        return weightedSum;
+    },
+
+    // Apply intelligent blend mode based on background analysis
+    applyMatrixBlendMode: function(isLightBackground, luminance) {
+        const body = document.body;
+        
+        // Remove existing matrix mode classes
+        body.classList.remove('matrix-mode-dark-bg', 'matrix-mode-light-bg', 'matrix-mode-high-contrast');
+        
+        // Get user preference for matrix mode
+        const matrixPrefs = JSON.parse(localStorage.getItem('vibeme-matrix-preferences') || '{}');
+        const forceHighContrast = matrixPrefs.highContrast || false;
+        const blendModeOverride = matrixPrefs.blendModeOverride || 'auto';
+        
+        if (forceHighContrast || blendModeOverride === 'high-contrast') {
+            body.classList.add('matrix-mode-high-contrast');
+        } else if (blendModeOverride !== 'auto') {
+            // Manual override
+            body.classList.add(`matrix-mode-${blendModeOverride}`);
+        } else {
+            // Intelligent automatic selection
+            if (isLightBackground) {
+                body.classList.add('matrix-mode-light-bg');
+            } else {
+                body.classList.add('matrix-mode-dark-bg');
+            }
+        }
+    },
+
+    // Get the currently active blend mode for debugging
+    getActiveBlendMode: function() {
+        const body = document.body;
+        if (body.classList.contains('matrix-mode-high-contrast')) return 'high-contrast';
+        if (body.classList.contains('matrix-mode-light-bg')) return 'light-bg (multiply)';
+        if (body.classList.contains('matrix-mode-dark-bg')) return 'dark-bg (screen)';
+        return 'none';
+    },
+
+    // Generate optimized matrix color palette with contrast validation
+    generateOptimizedMatrixPalette: function(baseHue, isLightBackground, backgroundLuminance) {
+        const colors = [];
+        
+        for (let i = 0; i < 6; i++) {
+            const hueVariation = (baseHue + (i * 25)) % 360; // Slightly wider spread for more variety
+            
+            let saturation, lightness;
+            
+            if (isLightBackground) {
+                // For light backgrounds: use darker, more saturated colors
+                saturation = Math.max(70, 85 + (i * 2)); // High saturation
+                lightness = Math.max(15, 25 + (i * 8));  // Dark colors
+            } else {
+                // For dark backgrounds: use brighter, vibrant colors
+                saturation = Math.max(60, 75 + (i * 3)); // High saturation
+                lightness = Math.max(50, 65 + (i * 5));  // Bright colors
+            }
+            
+            // Clamp values to valid ranges
+            saturation = Math.min(95, saturation);
+            lightness = Math.min(85, lightness);
+            
+            const color = this.hslToHex(hueVariation, saturation, lightness);
+            
+            // Validate contrast and adjust if necessary
+            const validatedColor = this.validateMatrixColorContrast(color, backgroundLuminance, isLightBackground);
+            
+            colors.push(validatedColor);
+        }
+        
+        return colors;
+    },
+
+    // Validate and adjust matrix color contrast
+    validateMatrixColorContrast: function(color, backgroundLuminance, isLightBackground) {
+        const colorLuminance = this.getRelativeLuminance(color);
+        const contrastRatio = backgroundLuminance > colorLuminance 
+            ? (backgroundLuminance + 0.05) / (colorLuminance + 0.05)
+            : (colorLuminance + 0.05) / (backgroundLuminance + 0.05);
+        
+        const minContrast = 3.0; // Minimum contrast for matrix visibility
+        
+        if (contrastRatio < minContrast) {
+            const hsl = this.hexToHsl(color);
+            if (!hsl) return color;
+            
+            // Adjust lightness to improve contrast
+            if (isLightBackground) {
+                // Make darker for light backgrounds
+                hsl.l = Math.max(5, hsl.l - 20);
+            } else {
+                // Make brighter for dark backgrounds
+                hsl.l = Math.min(95, hsl.l + 20);
+            }
+            
+            return this.hslToHex(hsl.h, hsl.s, hsl.l);
+        }
+        
+        return color;
+    },
+
+    // Refresh existing matrix columns with new colors
+    refreshMatrixColors: function() {
+        const columns = document.querySelectorAll('.binary-column');
+        columns.forEach((column, index) => {
+            const colorIndex = index % this.matrixConfig.colors.length;
+            const color = this.matrixConfig.colors[colorIndex];
+            
+            // Update the column's text color
+            column.style.color = color;
+            column.style.textShadow = `0 0 5px ${color}`;
+        });
+    },
+
+    // Enhanced matrix creation with bidirectional movement and advanced trail effects
+    createMatrixColumn: function() {
+        if (!this.state.effectsEnabled) return;
+        
+        const column = document.createElement('div');
+        column.className = 'binary-column';
+        
+        // Use current matrix colors with rotation
+        const colorIndex = this.matrixState.activeColumns.length % this.matrixConfig.colors.length;
+        const color = this.matrixConfig.colors[colorIndex];
+        
+        // Bidirectional movement: randomly choose direction if enabled
+        const direction = this.matrixConfig.bidirectional ? 
+            (Math.random() < 0.5 ? 1 : -1) : 1; // 1 = down, -1 = up
+        
+        // Store direction for this column
+        const columnId = `column_${Date.now()}_${Math.random()}`;
+        column.dataset.columnId = columnId;
+        this.matrixState.columnDirections.set(columnId, direction);
+        
+        // Generate matrix characters with enhanced character set
+        const chars = this.matrixConfig.characters;
+        const streamLength = Math.floor(Math.random() * this.matrixConfig.trailLength) + 10;
+        let columnContent = '';
+        
+        for (let i = 0; i < streamLength; i++) {
+            const char = chars[Math.floor(Math.random() * chars.length)];
+            let charClass = '';
+            
+            if (i === 0) {
+                // Leading character - gets special highlight
+                charClass = 'matrix-head';
+            } else if (i <= 5) {
+                // Trailing characters with enhanced fade effect
+                charClass = `matrix-trail-${Math.min(i, 5)}`;
+            }
+            
+            columnContent += `<span class="${charClass}">${char}</span>`;
+        }
+        
+        // Apply adaptive styling with bidirectional animation support
+        const startPosition = direction === 1 ? '-100vh' : '100vh'; // Start above or below screen
+        const animationName = direction === 1 ? 'matrix-fall' : 'matrix-rise';
+        
+        column.style.cssText = `
+            position: fixed;
+            top: ${startPosition};
+            width: ${this.matrixConfig.columnWidth}px;
+            font-family: 'Courier New', 'Roboto Mono', monospace;
+            font-size: ${this.getMatrixFontSize()}px;
+            font-weight: bold;
+            line-height: 1.1;
+            pointer-events: none;
+            z-index: -1;
+            color: ${color};
+            animation: ${animationName} ${this.getMatrixFallDuration()}s linear forwards;
+            will-change: transform, opacity;
+            --direction: ${direction};
+        `;
+        
+        column.innerHTML = columnContent;
+        
+        // Position randomly with better distribution
+        const maxLeft = window.innerWidth - this.matrixConfig.columnWidth;
+        const leftPosition = Math.random() * maxLeft;
+        column.style.left = `${leftPosition}px`;
+        
+        // Add slight random delay for more organic feel
+        const delay = Math.random() * 1000;
+        setTimeout(() => {
+            if (this.state.effectsEnabled) {
+                document.body.appendChild(column);
+                this.matrixState.activeColumns.push(column);
+            }
+        }, delay);
+        
+        // Remove after animation with cleanup
+        const fallDuration = this.getMatrixFallDuration();
+        setTimeout(() => {
+            this.removeMatrixColumn(column);
+        }, (fallDuration * 1000) + delay);
+    },
+
+    // Get responsive font size for matrix
+    getMatrixFontSize: function() {
+        if (window.innerWidth <= 640) return 11; // Mobile
+        if (window.innerWidth <= 1024) return 12; // Tablet  
+        return 14; // Desktop
+    },
+
+    // Get matrix fall duration based on user preferences
+    getMatrixFallDuration: function() {
+        const matrixPrefs = JSON.parse(localStorage.getItem('vibeme-matrix-preferences') || '{}');
+        const speedMultiplier = matrixPrefs.animationSpeed || 1.0;
+        return Math.max(4, Math.min(12, 8 / speedMultiplier)); // 4-12 second range
+    },
+
+    // Safe matrix column removal
+    removeMatrixColumn: function(column) {
+        try {
+            if (column && column.parentNode) {
+                column.parentNode.removeChild(column);
+            }
+            const index = this.matrixState.activeColumns.indexOf(column);
+            if (index > -1) {
+                this.matrixState.activeColumns.splice(index, 1);
+            }
+        } catch (error) {
+            console.warn('Matrix column removal error:', error);
+        }
     },
 
     darkenColor: function(color, percent) {
@@ -872,6 +1278,382 @@ const VibeMe = {
         
         // Convert back to hex
         return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+    },
+
+    // ===== ADVANCED COLOR SCIENCE UTILITIES =====
+    
+    // Convert HEX to RGB
+    hexToRgb: function(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : null;
+    },
+
+    // Convert RGB to HEX
+    rgbToHex: function(r, g, b) {
+        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    },
+
+    // Convert RGB to HSL
+    rgbToHsl: function(r, g, b) {
+        r /= 255;
+        g /= 255;
+        b /= 255;
+        
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+
+        if (max === min) {
+            h = s = 0; // achromatic
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+
+        return { h: h * 360, s: s * 100, l: l * 100 };
+    },
+
+    // Convert HSL to RGB
+    hslToRgb: function(h, s, l) {
+        h /= 360;
+        s /= 100;
+        l /= 100;
+        
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1/6) return p + (q - p) * 6 * t;
+            if (t < 1/2) return q;
+            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            return p;
+        };
+
+        let r, g, b;
+
+        if (s === 0) {
+            r = g = b = l; // achromatic
+        } else {
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
+        }
+
+        return {
+            r: Math.round(r * 255),
+            g: Math.round(g * 255),
+            b: Math.round(b * 255)
+        };
+    },
+
+    // Convert HEX to HSL
+    hexToHsl: function(hex) {
+        const rgb = this.hexToRgb(hex);
+        return rgb ? this.rgbToHsl(rgb.r, rgb.g, rgb.b) : null;
+    },
+
+    // Convert HSL to HEX
+    hslToHex: function(h, s, l) {
+        const rgb = this.hslToRgb(h, s, l);
+        return this.rgbToHex(rgb.r, rgb.g, rgb.b);
+    },
+
+    // Calculate relative luminance (WCAG 2.1 standard)
+    getRelativeLuminance: function(hex) {
+        const rgb = this.hexToRgb(hex);
+        if (!rgb) return 0;
+        
+        // Convert to sRGB
+        const rsRGB = rgb.r / 255;
+        const gsRGB = rgb.g / 255;
+        const bsRGB = rgb.b / 255;
+        
+        // Apply gamma correction
+        const gamma = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        
+        const rLinear = gamma(rsRGB);
+        const gLinear = gamma(gsRGB);
+        const bLinear = gamma(bsRGB);
+        
+        // Calculate luminance using WCAG formula
+        return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
+    },
+
+    // Calculate contrast ratio between two colors (WCAG 2.1 standard)
+    getContrastRatio: function(color1, color2) {
+        const lum1 = this.getRelativeLuminance(color1);
+        const lum2 = this.getRelativeLuminance(color2);
+        
+        const lightest = Math.max(lum1, lum2);
+        const darkest = Math.min(lum1, lum2);
+        
+        return (lightest + 0.05) / (darkest + 0.05);
+    },
+
+    // Check if color combination meets WCAG accessibility standards
+    meetsWCAGStandards: function(foreground, background, level = 'AA') {
+        const contrast = this.getContrastRatio(foreground, background);
+        
+        switch (level) {
+            case 'AA': return contrast >= 4.5;
+            case 'AAA': return contrast >= 7.0;
+            case 'AA-large': return contrast >= 3.0; // For large text (18pt+ or 14pt+ bold)
+            default: return contrast >= 4.5;
+        }
+    },
+
+    // Get optimal text color (black or white) for a background
+    getOptimalTextColor: function(backgroundColor) {
+        const contrastWithWhite = this.getContrastRatio('#ffffff', backgroundColor);
+        const contrastWithBlack = this.getContrastRatio('#000000', backgroundColor);
+        
+        return contrastWithWhite > contrastWithBlack ? '#ffffff' : '#000000';
+    },
+
+    // Adjust color brightness while maintaining hue
+    adjustBrightness: function(hex, amount) {
+        const hsl = this.hexToHsl(hex);
+        if (!hsl) return hex;
+        
+        // Adjust lightness, keeping within bounds
+        hsl.l = Math.max(0, Math.min(100, hsl.l + amount));
+        
+        return this.hslToHex(hsl.h, hsl.s, hsl.l);
+    },
+
+    // Adjust color saturation
+    adjustSaturation: function(hex, amount) {
+        const hsl = this.hexToHsl(hex);
+        if (!hsl) return hex;
+        
+        // Adjust saturation, keeping within bounds
+        hsl.s = Math.max(0, Math.min(100, hsl.s + amount));
+        
+        return this.hslToHex(hsl.h, hsl.s, hsl.l);
+    },
+
+    // Generate a color that contrasts well with the given color
+    generateContrastingColor: function(baseColor, minContrast = 4.5) {
+        const baseLuminance = this.getRelativeLuminance(baseColor);
+        
+        // Try white first, then black
+        if (this.getContrastRatio('#ffffff', baseColor) >= minContrast) {
+            return '#ffffff';
+        }
+        if (this.getContrastRatio('#000000', baseColor) >= minContrast) {
+            return '#000000';
+        }
+        
+        // If neither works, adjust the base color
+        const hsl = this.hexToHsl(baseColor);
+        if (!hsl) return '#ffffff';
+        
+        // Make it much lighter or darker
+        if (baseLuminance > 0.5) {
+            hsl.l = Math.max(0, hsl.l - 50); // Make much darker
+        } else {
+            hsl.l = Math.min(100, hsl.l + 50); // Make much lighter
+        }
+        
+        return this.hslToHex(hsl.h, hsl.s, hsl.l);
+    },
+
+    // ===== COLOR HARMONY GENERATORS =====
+    
+    // Generate analogous color scheme (colors next to each other on color wheel)
+    generateAnalogousColors: function(baseHue, saturation = 70, lightness = 60, spread = 30) {
+        const colors = [];
+        for (let i = -1; i <= 1; i++) {
+            const hue = (baseHue + (i * spread) + 360) % 360;
+            colors.push(this.hslToHex(hue, saturation, lightness));
+        }
+        return colors;
+    },
+
+    // Generate triadic color scheme (three colors evenly spaced on color wheel)
+    generateTriadicColors: function(baseHue, saturation = 70, lightness = 60) {
+        const colors = [];
+        for (let i = 0; i < 3; i++) {
+            const hue = (baseHue + (i * 120)) % 360;
+            colors.push(this.hslToHex(hue, saturation, lightness));
+        }
+        return colors;
+    },
+
+    // Generate complementary color scheme (opposite colors on color wheel)
+    generateComplementaryColors: function(baseHue, saturation = 70, lightness = 60) {
+        const baseColor = this.hslToHex(baseHue, saturation, lightness);
+        const complementaryHue = (baseHue + 180) % 360;
+        const complementaryColor = this.hslToHex(complementaryHue, saturation, lightness);
+        
+        // Add a third color that's a variation of the base
+        const accentColor = this.hslToHex(baseHue, saturation * 0.8, lightness * 1.2);
+        
+        return [baseColor, complementaryColor, accentColor];
+    },
+
+    // Generate split-complementary color scheme
+    generateSplitComplementaryColors: function(baseHue, saturation = 70, lightness = 60) {
+        const baseColor = this.hslToHex(baseHue, saturation, lightness);
+        const comp1Hue = (baseHue + 150) % 360;
+        const comp2Hue = (baseHue + 210) % 360;
+        
+        return [
+            baseColor,
+            this.hslToHex(comp1Hue, saturation, lightness),
+            this.hslToHex(comp2Hue, saturation, lightness)
+        ];
+    },
+
+    // Generate tetradic (rectangle) color scheme
+    generateTetradicColors: function(baseHue, saturation = 70, lightness = 60) {
+        const colors = [];
+        const offsets = [0, 60, 180, 240];
+        
+        for (const offset of offsets) {
+            const hue = (baseHue + offset) % 360;
+            colors.push(this.hslToHex(hue, saturation, lightness));
+        }
+        
+        return colors.slice(0, 3); // Return only first 3 for consistency
+    },
+
+    // Generate monochromatic color scheme (same hue, different saturation/lightness)
+    generateMonochromaticColors: function(baseHue, baseSaturation = 70, baseLightness = 60) {
+        return [
+            this.hslToHex(baseHue, baseSaturation, baseLightness),
+            this.hslToHex(baseHue, baseSaturation * 0.7, baseLightness * 1.3),
+            this.hslToHex(baseHue, baseSaturation * 1.2, baseLightness * 0.8)
+        ];
+    },
+
+    // Generate a vibrant color palette with constraints
+    generateVibriantPalette: function(baseHue, vibrancy = 0.8, warmth = 0.5) {
+        // Adjust saturation and lightness based on vibrancy
+        const saturation = Math.max(40, Math.min(95, 50 + (vibrancy * 45)));
+        const lightness = Math.max(30, Math.min(80, 45 + (vibrancy * 25)));
+        
+        // Adjust hue slightly based on warmth preference
+        const hueShift = (warmth - 0.5) * 60; // Shift towards warm/cool
+        const adjustedHue = (baseHue + hueShift + 360) % 360;
+        
+        // Generate harmonious colors based on golden ratio
+        const goldenAngle = 137.5; // Golden angle in degrees
+        const colors = [];
+        
+        for (let i = 0; i < 3; i++) {
+            const hue = (adjustedHue + (i * goldenAngle)) % 360;
+            const sat = saturation + (Math.sin(i * Math.PI / 3) * 15); // Vary saturation
+            const light = lightness + (Math.cos(i * Math.PI / 3) * 15); // Vary lightness
+            
+            colors.push(this.hslToHex(
+                hue,
+                Math.max(20, Math.min(95, sat)),
+                Math.max(25, Math.min(85, light))
+            ));
+        }
+        
+        return colors;
+    },
+
+    // Intelligent theme generator that chooses the best harmony type
+    generateIntelligentTheme: function(options = {}) {
+        const {
+            harmonyType = 'auto',
+            vibrancy = 0.7,
+            warmth = 0.5,
+            accessibility = true,
+            baseHue = null
+        } = options;
+        
+        // Generate or use provided base hue
+        const hue = baseHue !== null ? baseHue : Math.floor(Math.random() * 360);
+        
+        // Calculate optimal saturation and lightness
+        const saturation = Math.max(30, Math.min(90, 40 + (vibrancy * 50)));
+        const lightness = Math.max(35, Math.min(75, 45 + (vibrancy * 20)));
+        
+        let colors;
+        
+        // Choose harmony type intelligently or use specified type
+        if (harmonyType === 'auto') {
+            const harmonies = ['analogous', 'triadic', 'complementary', 'vibrant'];
+            const chosenHarmony = harmonies[Math.floor(Math.random() * harmonies.length)];
+            
+            switch (chosenHarmony) {
+                case 'analogous': colors = this.generateAnalogousColors(hue, saturation, lightness); break;
+                case 'triadic': colors = this.generateTriadicColors(hue, saturation, lightness); break;
+                case 'complementary': colors = this.generateComplementaryColors(hue, saturation, lightness); break;
+                case 'vibrant': colors = this.generateVibriantPalette(hue, vibrancy, warmth); break;
+                default: colors = this.generateAnalogousColors(hue, saturation, lightness);
+            }
+        } else {
+            switch (harmonyType) {
+                case 'analogous': colors = this.generateAnalogousColors(hue, saturation, lightness); break;
+                case 'triadic': colors = this.generateTriadicColors(hue, saturation, lightness); break;
+                case 'complementary': colors = this.generateComplementaryColors(hue, saturation, lightness); break;
+                case 'split-complementary': colors = this.generateSplitComplementaryColors(hue, saturation, lightness); break;
+                case 'tetradic': colors = this.generateTetradicColors(hue, saturation, lightness); break;
+                case 'monochromatic': colors = this.generateMonochromaticColors(hue, saturation, lightness); break;
+                case 'vibrant': colors = this.generateVibriantPalette(hue, vibrancy, warmth); break;
+                default: colors = this.generateAnalogousColors(hue, saturation, lightness);
+            }
+        }
+        
+        // Apply accessibility constraints if requested
+        if (accessibility) {
+            colors = this.ensureAccessibilityCompliance(colors);
+        }
+        
+        return {
+            color1: colors[0],
+            color2: colors[1],
+            color3: colors[2],
+            harmonyType: harmonyType === 'auto' ? 'intelligent' : harmonyType,
+            baseHue: hue,
+            vibrancy,
+            warmth
+        };
+    },
+
+    // Ensure color palette meets accessibility standards
+    ensureAccessibilityCompliance: function(colors) {
+        const improvedColors = [...colors];
+        
+        // Check each color against white and black text
+        for (let i = 0; i < improvedColors.length; i++) {
+            const color = improvedColors[i];
+            const contrastWhite = this.getContrastRatio('#ffffff', color);
+            const contrastBlack = this.getContrastRatio('#000000', color);
+            
+            // If neither meets minimum standards, adjust the color
+            if (contrastWhite < 3.0 && contrastBlack < 3.0) {
+                const hsl = this.hexToHsl(color);
+                if (hsl) {
+                    // Adjust lightness to improve contrast
+                    if (hsl.l > 50) {
+                        hsl.l = Math.max(25, hsl.l - 30); // Make darker
+                    } else {
+                        hsl.l = Math.min(75, hsl.l + 30); // Make lighter
+                    }
+                    improvedColors[i] = this.hslToHex(hsl.h, hsl.s, hsl.l);
+                }
+            }
+        }
+        
+        return improvedColors;
     },
 
     setupMouseGlow: function() {
@@ -940,12 +1722,6 @@ const VibeMe = {
         animate();
     },
 
-
-
-
-
-
-
     // Enhanced hue extraction with better color detection
     extractHueFromColor: function(hexColor) {
         const rgb = this.hexToRgb(hexColor);
@@ -972,17 +1748,6 @@ const VibeMe = {
         
         hue = Math.round(hue * 60);
         return hue < 0 ? hue + 360 : hue;
-    },
-
-
-    // Color utility functions
-    hexToRgb: function(hex) {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : null;
     },
 
     getLuminance: function(r, g, b) {
@@ -1029,12 +1794,6 @@ const VibeMe = {
         };
     },
 
-    // User customization controls
-
-
-
-
-
     setupMatrixEffect: function() {
         // Clean up any existing matrix effect
         this.stopMatrixEffect();
@@ -1068,62 +1827,22 @@ const VibeMe = {
             this.matrixState.resizeHandler = null;
         }
         
-        // Clean up all active columns with proper event listener removal
+        // Clean up all active columns
         this.matrixState.activeColumns.forEach(column => {
-            if (column) {
-                try {
-                    // Remove event listeners
-                    if (column._animationEndHandler) {
-                        column.removeEventListener('animationend', column._animationEndHandler);
-                        column._animationEndHandler = null;
-                    }
-                    // Remove from DOM
-                    if (column.parentNode) {
-                        column.parentNode.removeChild(column);
-                    }
-                } catch (error) {
-                    console.warn('🔴 MATRIX: Error cleaning up column:', error);
-                }
+            if (column && column.parentNode) {
+                column.parentNode.removeChild(column);
             }
         });
         this.matrixState.activeColumns = [];
     },
 
-    // Helper function to clean up matrix column event listeners
-    cleanupColumnEventListeners: function(column) {
-        if (!column) return;
-        
-        // Remove existing animationend listeners by cloning the element
-        // This is the most reliable way to remove all event listeners
-        const clonedColumn = column.cloneNode(true);
-        if (column.parentNode) {
-            column.parentNode.replaceChild(clonedColumn, column);
-        }
-        return clonedColumn;
-    },
-
-    // Setup event listener for matrix column animation recycling
-    setupColumnAnimationListener: function(column) {
-        if (!column) return;
-        
-        // Create a named function for better memory management
-        const animationEndHandler = () => {
-            if (this.state.effectsEnabled && column.parentNode) {
-                this.recycleMatrixColumn(column);
-            }
-        };
-        
-        // Store the handler reference for potential cleanup
-        column._animationEndHandler = animationEndHandler;
-        column.addEventListener('animationend', animationEndHandler);
-    },
-
     createMatrixColumns: function() {
         if (!this.matrixBg || !this.state.effectsEnabled) return;
         
-        // Calculate target column count
+        // Calculate target column count using dynamic density multiplier
         const baseColumnCount = Math.floor(window.innerWidth / this.matrixConfig.columnWidth);
-        const targetColumns = Math.floor(baseColumnCount * 1.5); // 1.5x coverage for density
+        const densityMultiplier = this.matrixConfig.densityMultiplier || 1.5;
+        const targetColumns = Math.floor(baseColumnCount * densityMultiplier);
         const neededColumns = targetColumns - this.matrixState.activeColumns.length;
 
         if (neededColumns > 0) {
@@ -1153,59 +1872,87 @@ const VibeMe = {
         // Fade in the column
         requestAnimationFrame(() => setTimeout(() => column.classList.add('visible'), 10));
         
-        // Setup clean event listener for animation recycling
-        this.setupColumnAnimationListener(column);
+        // Time-based recycling - no event listeners needed
     },
 
     recycleMatrixColumn: function(column) {
-        if (!this.state.effectsEnabled || !column || !column.parentNode) return;
-        
-        // Clean up existing event listeners before recycling
-        const cleanedColumn = this.cleanupColumnEventListeners(column);
-        
-        // Update the reference in activeColumns array
-        const columnIndex = this.matrixState.activeColumns.indexOf(column);
-        if (columnIndex !== -1) {
-            this.matrixState.activeColumns[columnIndex] = cleanedColumn;
-        }
+        if (!this.state.effectsEnabled) return;
         
         // Set new horizontal position
-        cleanedColumn.style.left = `${Math.random() * 100}%`;
+        column.style.left = `${Math.random() * 100}%`;
         
         // Generate new matrix content
-        cleanedColumn.innerHTML = this.generateMatrixContent();
+        column.innerHTML = this.generateMatrixContent();
         
         // Apply position-based gradient color
-        this.applyMatrixThemeColors(cleanedColumn);
+        this.applyMatrixThemeColors(column);
         
         // Set new animation duration and delay
         const duration = 12 + Math.random() * 8; // 12-20 seconds
         const delay = Math.random() * 4; // 0-4 seconds
         
+        // Store animation timing for heartbeat monitoring
+        column.dataset.startTime = Date.now() + (delay * 1000);
+        column.dataset.duration = duration * 1000;
+        
         // Reset and restart animation
-        cleanedColumn.style.animation = 'none';
+        column.style.animation = 'none';
         requestAnimationFrame(() => {
-            cleanedColumn.style.animation = `fall ${duration}s linear ${delay}s`;
+            column.style.animation = `fall ${duration}s linear ${delay}s`;
         });
-        
-        // Setup fresh event listener for the next cycle
-        this.setupColumnAnimationListener(cleanedColumn);
-        
-        // Debug logging for monitoring matrix recycling
-        if (Math.random() < 0.1) { // Only log 10% of the time to avoid spam
-            console.log('🔄 MATRIX: Column recycled successfully, active columns:', this.matrixState.activeColumns.length);
-        }
+    },
+
+    checkMatrixColumns: function() {
+        if (!this.state.effectsEnabled) return;
+        const now = Date.now();
+        this.matrixState.activeColumns.forEach(column => {
+            const startTime = parseFloat(column.dataset.startTime || 0);
+            const duration = parseFloat(column.dataset.duration || 0);
+            // If the animation's time is up, recycle it forcefully
+            if (startTime && duration && now > startTime + duration) {
+                this.recycleMatrixColumn(column);
+            }
+        });
     },
 
     generateMatrixContent: function() {
-        const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const length = 100 + Math.floor(Math.random() * 50); // 100-150 characters
+        const chars = this.matrixConfig.characters;
+        const maxLength = this.matrixConfig.trailLength;
+        const fadeRate = this.matrixConfig.trailFadeRate;
+        
+        // Variable length trails for more organic appearance
+        const length = Math.floor(Math.random() * maxLength) + Math.floor(maxLength * 0.3);
         let content = '';
         
         for (let i = 0; i < length; i++) {
             const char = chars[Math.floor(Math.random() * chars.length)];
-            const opacity = Math.max(0.3, 1 - (i / length)); // Trailing effect
-            content += `<span class="matrix-char" style="opacity: ${opacity.toFixed(2)}">${char}</span>`;
+            
+            // Enhanced opacity calculation with exponential decay
+            let opacity;
+            if (i === 0) {
+                // Leading character - maximum brightness
+                opacity = 1.0;
+            } else if (i <= 3) {
+                // High-intensity trail (near head)
+                opacity = Math.max(0.7, 1 - (i * 0.15));
+            } else {
+                // Gradual exponential fade for trailing characters
+                const fadePosition = (i - 3) / (length - 3);
+                opacity = Math.max(0.1, Math.exp(-fadePosition * 3) * 0.7);
+            }
+            
+            // Apply enhanced opacity with trail fade rate
+            const finalOpacity = Math.max(fadeRate, opacity);
+            
+            // Add enhanced character classes for better styling
+            let charClass = 'matrix-char';
+            if (i === 0) {
+                charClass += ' matrix-head';
+            } else if (i <= 5) {
+                charClass += ` matrix-trail-${Math.min(i, 5)}`;
+            }
+            
+            content += `<span class="${charClass}" style="opacity: ${finalOpacity.toFixed(3)}">${char}</span>`;
         }
         
         return content;
@@ -1229,283 +1976,105 @@ const VibeMe = {
         column.style.setProperty('text-shadow', `0 0 2px ${glowColor}, 0 0 4px ${glowColor}`, 'important');
     },
 
-    removeSingleMatrixColumn: function() {
-        if (this.matrixState.activeColumns.length === 0) return;
+    // ===== EVENT LISTENERS =====
+    setupEventListeners: function() {
+        document.getElementById('generate-btn').addEventListener('click', () => this.updateQuote());
+        document.getElementById('timer-toggle-btn').addEventListener('click', () => this.toggleTimer());
+        document.getElementById('copy-quote-btn').addEventListener('click', () => this.copyQuote());
+        document.getElementById('favorite-quote-btn').addEventListener('click', () => this.toggleFavorite());
+        document.getElementById('dark-mode-toggle').addEventListener('click', () => this.toggleDarkMode());
+        document.getElementById('settings-toggle').addEventListener('click', () => this.toggleSettings());
+        document.getElementById('effects-toggle-checkbox').addEventListener('change', () => this.toggleEffects());
+        document.getElementById('clear-favorites-btn').addEventListener('click', () => this.clearFavorites());
+        document.getElementById('toggle-add-quote-form').addEventListener('click', () => this.toggleAddQuoteForm());
+        document.getElementById('submit-quote-btn').addEventListener('click', () => this.submitQuote());
         
-        const column = this.matrixState.activeColumns.pop();
-        if (column && column.parentNode) {
-            try {
-                // Clean up event listeners before removal
-                if (column._animationEndHandler) {
-                    column.removeEventListener('animationend', column._animationEndHandler);
-                    column._animationEndHandler = null;
-                }
-                column.parentNode.removeChild(column);
-            } catch (error) {
-                console.warn('🔴 MATRIX: Error removing column:', error);
-            }
-        }
-    },
-
-    startMatrixUpdates: function() {
-        if (!this.state.effectsEnabled) return;
-        
-        this.matrixState.interval = setInterval(() => {
-            if (this.state.effectsEnabled) {
-                this.updateMatrixColumns();
-            }
-        }, this.matrixConfig.updateInterval);
-    },
-
-    updateMatrixColumns: function() {
-        if (!this.matrixBg || !this.state.effectsEnabled) return;
-        
-        const targetColumnCount = Math.floor(window.innerWidth / this.matrixConfig.columnWidth);
-        const densityTarget = Math.floor(targetColumnCount * 1.5);
-        
-        if (this.matrixState.activeColumns.length < densityTarget) {
-            const columnsToAdd = Math.min(5, densityTarget - this.matrixState.activeColumns.length);
-            for (let i = 0; i < columnsToAdd; i++) {
-                this.createSingleMatrixColumn();
-            }
-        }
-    },
-
-    handleMatrixResize: function() {
-        this.createMatrixColumns();
-    },
-
-    createHeartParticles: function() {
-        const container = document.querySelector('.quote-container-inner');
-        if (!container) return;
-
-        for (let i = 0; i < 5; i++) {
-            setTimeout(() => {
-                const heart = document.createElement('div');
-                heart.innerHTML = '❤️';
-                heart.style.cssText = `
-                    position: absolute;
-                    font-size: 1.5rem;
-                    pointer-events: none;
-                    z-index: 1000;
-                    left: ${Math.random() * 100}%;
-                    top: 50%;
-                    animation: floatUp 2s ease-out forwards;
-                `;
-
-                container.appendChild(heart);
-                
-                setTimeout(() => heart.remove(), 2000);
-            }, i * 100);
-        }
-    },
-
-    // ===== FEEDBACK SYSTEM =====
-    showFeedback: function(message, type = 'info') {
-        const feedback = document.getElementById('copy-feedback');
-        if (feedback) {
-            feedback.textContent = message;
-            feedback.className = `text-center text-sm mt-3 h-4 ${type === 'success' ? 'text-green-400' : type === 'error' ? 'text-red-400' : 'dynamic-text-secondary'}`;
-            setTimeout(() => {
-                feedback.textContent = "";
-                feedback.className = "text-center text-sm dynamic-text-secondary mt-3 h-4";
-            }, 3000);
+        // Matrix render mode selector
+        const renderModeSelector = document.getElementById('matrix-render-mode');
+        if (renderModeSelector) {
+            renderModeSelector.addEventListener('change', (e) => {
+                this.updateMatrixRenderMode(e.target.value);
+            });
+            
+            // Initialize canvas performance settings visibility
+            this.toggleCanvasPerformanceSettings(
+                renderModeSelector.value === 'canvas' || renderModeSelector.value === 'hybrid'
+            );
         }
     },
 
     // ===== DARK MODE =====
     initializeDarkMode: function() {
-        this.applyDarkMode();
+        if (this.state.isDarkMode) {
+            document.body.classList.add('dark-mode');
+        }
     },
 
     toggleDarkMode: function() {
         this.state.isDarkMode = !this.state.isDarkMode;
-        this.applyDarkMode();
-        localStorage.setItem('vibeme-dark-mode', JSON.stringify(this.state.isDarkMode));
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('vibeme-dark-mode', this.state.isDarkMode);
         this.playSound('click');
     },
 
-    applyDarkMode: function() {
-        const body = document.body;
-        const darkModeBtn = document.getElementById('dark-mode-toggle');
-        const icon = darkModeBtn ? darkModeBtn.querySelector('i') : null;
-        
-        if (this.state.isDarkMode) {
-            body.classList.add('dark-mode');
-            if (icon) {
-                icon.classList.remove('fa-moon');
-                icon.classList.add('fa-sun');
-            }
-        } else {
-            body.classList.remove('dark-mode');
-            if (icon) {
-                icon.classList.remove('fa-sun');
-                icon.classList.add('fa-moon');
-            }
-        }
-    },
-
-
-    // ===== QUOTE RATING SYSTEM =====
-    rateQuote: function(rating) {
-        const quote = this.getCurrentQuote();
-        const quoteKey = `${quote.text}_${quote.author}`;
-        
-        this.state.quoteRatings[quoteKey] = rating;
-        localStorage.setItem('vibeme-ratings', JSON.stringify(this.state.quoteRatings));
-        
-        const rateUpBtn = document.getElementById('rate-up-btn');
-        const rateDownBtn = document.getElementById('rate-down-btn');
-        
-        // Update button states
-        if (rateUpBtn && rateDownBtn) {
-            const upIcon = rateUpBtn.querySelector('i');
-            const downIcon = rateDownBtn.querySelector('i');
-            
-            // Reset both buttons
-            upIcon.classList.remove('fas');
-            upIcon.classList.add('far');
-            downIcon.classList.remove('fas');
-            downIcon.classList.add('far');
-            
-            // Highlight the selected rating
-            if (rating === 'up') {
-                upIcon.classList.remove('far');
-                upIcon.classList.add('fas');
-                this.showFeedback("Thanks for rating! 👍", 'success');
-                this.playSound('success');
-            } else {
-                downIcon.classList.remove('far');
-                downIcon.classList.add('fas');
-                this.showFeedback("Feedback noted 👎", 'info');
-                this.playSound('click');
-            }
-        }
-        
-        this.triggerHapticFeedback('light');
-    },
-
-    updateRatingDisplay: function() {
-        const quote = this.getCurrentQuote();
-        const quoteKey = `${quote.text}_${quote.author}`;
-        const rating = this.state.quoteRatings[quoteKey];
-        
-        const rateUpBtn = document.getElementById('rate-up-btn');
-        const rateDownBtn = document.getElementById('rate-down-btn');
-        
-        if (rateUpBtn && rateDownBtn) {
-            const upIcon = rateUpBtn.querySelector('i');
-            const downIcon = rateDownBtn.querySelector('i');
-            
-            // Reset icons
-            upIcon.classList.remove('fas');
-            upIcon.classList.add('far');
-            downIcon.classList.remove('fas');
-            downIcon.classList.add('far');
-            
-            // Show current rating
-            if (rating === 'up') {
-                upIcon.classList.remove('far');
-                upIcon.classList.add('fas');
-            } else if (rating === 'down') {
-                downIcon.classList.remove('far');
-                downIcon.classList.add('fas');
-            }
-        }
-    },
-
-    // ===== SECURE QUOTE VALIDATION =====
+    // ===== QUOTE VALIDATION =====
     initializeQuoteValidation: function() {
+        // This is a placeholder for a more robust validation system.
+        // In a real-world application, this would involve more sophisticated checks.
         const textInput = document.getElementById('new-quote-text');
-        const authorInput = document.getElementById('new-quote-author');
-        const charCounter = document.getElementById('char-counter');
-        
-        if (textInput && charCounter) {
-            textInput.addEventListener('input', () => {
-                const length = textInput.value.length;
-                charCounter.textContent = `${length}/300`;
-                this.validateQuoteInput();
-            });
-        }
-        
-        if (authorInput) {
-            authorInput.addEventListener('input', () => {
-                this.validateQuoteInput();
-            });
-        }
-    },
-
-    validateQuoteInput: function() {
-        const textInput = document.getElementById('new-quote-text');
-        const authorInput = document.getElementById('new-quote-author');
         const submitBtn = document.getElementById('submit-quote-btn');
-        const validationDiv = document.getElementById('quote-validation');
-        
-        if (!textInput || !submitBtn || !validationDiv) return;
-        
-        const text = textInput.value.trim();
-        const author = authorInput ? authorInput.value.trim() : '';
-        
-        // Validation rules
-        const issues = [];
-        
-        // Length check
-        if (text.length < 10) {
-            issues.push('Quote must be at least 10 characters');
-        }
-        
-        // Content filtering
-        const inappropriateWords = ['hate', 'stupid', 'idiot', 'kill', 'die', 'death', 'violence'];
-        const hasInappropriate = inappropriateWords.some(word => 
-            text.toLowerCase().includes(word.toLowerCase())
-        );
-        
-        if (hasInappropriate) {
-            issues.push('Contains inappropriate content');
-        }
-        
-        // Positive sentiment check
-        const negativeWords = ['never', 'impossible', 'can\'t', 'won\'t', 'failure', 'quit'];
-        const negativeCount = negativeWords.filter(word => 
-            text.toLowerCase().includes(word.toLowerCase())
-        ).length;
-        
-        if (negativeCount > 2) {
-            issues.push('Quote should be more positive and inspiring');
-        }
-        
-        // Author validation
-        if (author && author.length > 0) {
-            if (author.length < 2) {
-                issues.push('Author name too short');
-            }
-            if (!/^[a-zA-Z\s\-'.]+$/.test(author)) {
-                issues.push('Author name contains invalid characters');
-            }
-        }
-        
-        // Update UI
-        if (issues.length === 0) {
-            submitBtn.disabled = false;
-            validationDiv.classList.add('hidden');
-        } else {
-            submitBtn.disabled = true;
-            validationDiv.className = 'text-xs text-red-400 bg-red-900/20 p-2 rounded border border-red-500/30';
-            validationDiv.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i>${issues.join(', ')}`;
+        if (textInput && submitBtn) {
+            textInput.addEventListener('input', () => {
+                if (textInput.value.trim().length > 10) {
+                    submitBtn.disabled = false;
+                } else {
+                    submitBtn.disabled = true;
+                }
+            });
         }
     },
 
-    // ===== DATA PERSISTENCE =====
+    // ===== STATS =====
+    updateStats: function() {
+        // This is a placeholder for displaying stats.
+    },
+
+    saveStats: function() {
+        localStorage.setItem('vibeme-stats', JSON.stringify(this.state.stats));
+    },
+
+    // ===== FEEDBACK =====
+    showFeedback: function(message, type = 'info') {
+        const feedback = document.getElementById('copy-feedback');
+        if (feedback) {
+            feedback.textContent = message;
+            feedback.className = `text-center text-sm mt-3 h-4 ${type === 'success' ? 'text-green-500' : 'text-red-500'}`;
+            setTimeout(() => {
+                feedback.textContent = '';
+            }, 3000);
+        }
+    },
+
+    // ===== PARTICLES =====
+    createHeartParticles: function() {
+        // This is a placeholder for creating heart particles.
+    },
+
+    // ===== RATING =====
+    updateRatingDisplay: function() {
+        // This is a placeholder for updating the rating display.
+    },
+
+    // ===== USER PREFERENCES =====
     loadUserPreferences: function() {
-        // Load effects preference
-        const effectsPref = localStorage.getItem('vibeme-effects');
-        if (effectsPref !== null) {
-            this.state.effectsEnabled = effectsPref === 'true';
+        const effectsEnabled = localStorage.getItem('vibeme-effects');
+        if (effectsEnabled !== null) {
+            this.state.effectsEnabled = JSON.parse(effectsEnabled);
             const checkbox = document.getElementById('effects-toggle-checkbox');
             if (checkbox) {
                 checkbox.checked = this.state.effectsEnabled;
-                document.body.classList.toggle('effects-disabled', !this.state.effectsEnabled);
             }
+            document.body.classList.toggle('effects-disabled', !this.state.effectsEnabled);
         }
     },
 
@@ -1517,207 +2086,543 @@ const VibeMe = {
         localStorage.setItem('vibeme-custom-quotes', JSON.stringify(this.state.customQuotes));
     },
 
-    saveStats: function() {
-        localStorage.setItem('vibeme-stats', JSON.stringify(this.state.stats));
+    // ===== MATRIX RESIZE =====
+    handleMatrixResize: function() {
+        this.createMatrixColumns();
     },
 
-    updateStats: function() {
-        const today = new Date().toDateString();
-        if (this.state.stats.lastVisit !== today) {
-            if (this.state.stats.lastVisit === new Date(Date.now() - 86400000).toDateString()) {
-                this.state.stats.dayStreak++;
-            } else {
-                this.state.stats.dayStreak = 1;
+    // ===== MATRIX UPDATES =====
+    startMatrixUpdates: function() {
+        if (this.matrixState.interval) clearInterval(this.matrixState.interval);
+        this.matrixState.interval = setInterval(() => {
+            this.checkMatrixColumns();
+        }, this.matrixConfig.updateInterval);
+    },
+
+    // ===== CANVAS MATRIX =====
+    initializeCanvasMatrix: function() {
+        if (!this.state.effectsEnabled) return;
+
+        console.log('🎨 Initializing Canvas Matrix Rain...');
+
+        try {
+            // Get canvas element and context
+            this.matrixState.canvas = document.getElementById('matrix-canvas');
+            if (!this.matrixState.canvas) {
+                console.warn('⚠️ Canvas element not found');
+                return;
             }
-            this.state.stats.lastVisit = today;
-            this.saveStats();
+
+            this.matrixState.canvasContext = this.matrixState.canvas.getContext('2d');
+            if (!this.matrixState.canvasContext) {
+                console.warn('⚠️ Canvas context not available');
+                return;
+            }
+
+            // Show canvas
+            this.matrixState.canvas.style.display = 'block';
+
+            // Set up canvas size
+            this.resizeCanvasMatrix();
+
+            // Initialize drop system
+            this.initializeCanvasDrops();
+
+            // Start animation loop
+            this.startCanvasAnimation();
+
+            // Add resize listener
+            if (!this.matrixState.canvasResizeHandler) {
+                this.matrixState.canvasResizeHandler = this.debounce(() => {
+                    this.resizeCanvasMatrix();
+                    this.initializeCanvasDrops();
+                }, 250);
+                window.addEventListener('resize', this.matrixState.canvasResizeHandler, { passive: true });
+            }
+
+            console.log('✅ Canvas Matrix Rain initialized successfully');
+
+        } catch (error) {
+            console.error('❌ Canvas Matrix initialization failed:', error);
+            // Fallback to DOM mode if canvas fails
+            this.matrixConfig.renderMode = 'dom';
         }
     },
 
-    // ===== EVENT LISTENERS =====
-    setupEventListeners: function() {
-        // Generate button
-        const generateBtn = document.getElementById('generate-btn');
-        if (generateBtn) {
-            generateBtn.addEventListener('click', () => this.updateQuote());
+    resizeCanvasMatrix: function() {
+        if (!this.matrixState.canvas) return;
+
+        // Set canvas size to match viewport
+        this.matrixState.canvas.width = window.innerWidth;
+        this.matrixState.canvas.height = window.innerHeight;
+
+        // Update canvas configuration
+        const config = this.matrixConfig.canvasConfig;
+        config.columns = Math.floor(this.matrixState.canvas.width / config.columnSpacing);
+
+        console.log(`📐 Canvas resized: ${this.matrixState.canvas.width}x${this.matrixState.canvas.height}, Columns: ${config.columns}`);
+    },
+
+    initializeCanvasDrops: function() {
+        if (!this.matrixState.canvas) return;
+
+        const config = this.matrixConfig.canvasConfig;
+        const columns = config.columns || Math.floor(this.matrixState.canvas.width / config.columnSpacing);
+        
+        // Clear existing drops
+        this.matrixState.canvasDrops = [];
+
+        // Initialize drops for each column
+        for (let i = 0; i < columns; i++) {
+            const drop = this.createCanvasDrop(i);
+            this.matrixState.canvasDrops.push(drop);
         }
 
-        // Copy button
-        const copyBtn = document.getElementById('copy-quote-btn');
-        if (copyBtn) {
-            copyBtn.addEventListener('click', () => this.copyQuote());
+        console.log(`💧 Initialized ${columns} canvas drops`);
+    },
+
+    createCanvasDrop: function(columnIndex) {
+        const config = this.matrixConfig.canvasConfig;
+        const characters = this.matrixConfig.characters || ['0', '1'];
+        
+        return {
+            x: columnIndex * config.columnSpacing,
+            y: Math.random() * this.matrixState.canvas.height / config.fontSize,
+            direction: Math.random() < 0.5 ? 1 : -1, // 1 for down, -1 for up
+            trail: [],
+            length: Math.floor(Math.random() * (this.matrixConfig.trailLength || 20)) + 5,
+            speed: 0.8 + Math.random() * 0.4, // Slight speed variation
+            opacity: 0.8 + Math.random() * 0.2,
+            characters: characters,
+            lastCharChange: 0,
+            charChangeInterval: 100 + Math.random() * 200 // Character change timing
+        };
+    },
+
+    startCanvasAnimation: function() {
+        if (this.matrixState.canvasAnimationId) {
+            cancelAnimationFrame(this.matrixState.canvasAnimationId);
         }
 
-        // Favorite button
-        const favoriteBtn = document.getElementById('favorite-quote-btn');
-        if (favoriteBtn) {
-            favoriteBtn.addEventListener('click', () => this.toggleFavorite());
-        }
+        const animate = (currentTime) => {
+            if (!this.matrixState.canvas || !this.state.effectsEnabled) return;
 
-        // Timer toggle
-        const timerBtn = document.getElementById('timer-toggle-btn');
-        if (timerBtn) {
-            timerBtn.addEventListener('click', () => this.toggleTimer());
-        }
+            try {
+                // Check for canvas context loss
+                if (!this.matrixState.canvasContext || this.matrixState.canvasContext.isContextLost?.()) {
+                    console.warn('⚠️ Canvas context lost, attempting recovery...');
+                    this.handleCanvasContextLoss();
+                    return;
+                }
 
-        // Settings toggle
-        const settingsToggle = document.getElementById('settings-toggle');
-        if (settingsToggle) {
-            settingsToggle.addEventListener('click', () => this.toggleSettings());
-        }
-
-        // Effects toggle
-        const effectsToggle = document.getElementById('effects-toggle-checkbox');
-        if (effectsToggle) {
-            effectsToggle.addEventListener('change', () => this.toggleEffects());
-        }
-
-        // Clear favorites
-        const clearFavoritesBtn = document.getElementById('clear-favorites-btn');
-        if (clearFavoritesBtn) {
-            clearFavoritesBtn.addEventListener('click', () => this.clearFavorites());
-        }
-
-        // Add quote form toggle
-        const addQuoteToggle = document.getElementById('toggle-add-quote-form');
-        if (addQuoteToggle) {
-            addQuoteToggle.addEventListener('click', () => this.toggleAddQuoteForm());
-        }
-
-        // Submit quote
-        const submitBtn = document.getElementById('submit-quote-btn');
-        if (submitBtn) {
-            submitBtn.addEventListener('click', () => this.submitQuote());
-        }
-
-        // Dark mode toggle
-        const darkModeToggle = document.getElementById('dark-mode-toggle');
-        if (darkModeToggle) {
-            darkModeToggle.addEventListener('click', () => this.toggleDarkMode());
-        }
-
-        // Rating buttons
-        const rateUpBtn = document.getElementById('rate-up-btn');
-        const rateDownBtn = document.getElementById('rate-down-btn');
-        if (rateUpBtn) {
-            rateUpBtn.addEventListener('click', () => this.rateQuote('up'));
-        }
-        if (rateDownBtn) {
-            rateDownBtn.addEventListener('click', () => this.rateQuote('down'));
-        }
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            
-            switch(e.key.toLowerCase()) {
-                case ' ':
-                case 'enter':
-                    e.preventDefault();
-                    this.updateQuote();
-                    break;
-                case 'c':
-                    if (e.ctrlKey || e.metaKey) {
-                        e.preventDefault();
-                        this.copyQuote();
+                // Performance monitoring
+                if (this.matrixState.lastFrameTime) {
+                    const frameTime = currentTime - this.matrixState.lastFrameTime;
+                    this.matrixState.frameCount++;
+                    
+                    // Update average frame time every 60 frames
+                    if (this.matrixState.frameCount % 60 === 0) {
+                        this.matrixState.avgFrameTime = frameTime;
+                        
+                        // Adjust performance every 5 seconds
+                        if (this.matrixState.frameCount % 300 === 0) {
+                            this.adjustCanvasPerformance();
+                        }
                     }
-                    break;
-                case 'f':
-                    e.preventDefault();
-                    this.toggleFavorite();
-                    break;
-                case 't':
-                    e.preventDefault();
-                    this.toggleTimer();
-                    break;
-                case 'escape':
-                    const panel = document.getElementById('settings-panel');
-                    if (panel && !panel.classList.contains('hidden')) {
-                        panel.classList.add('hidden');
-                    }
-                    break;
+                }
+                this.matrixState.lastFrameTime = currentTime;
+
+                // Draw matrix frame
+                this.drawCanvasMatrix(currentTime);
+
+                // Continue animation
+                this.matrixState.canvasAnimationId = requestAnimationFrame(animate);
+
+            } catch (error) {
+                console.error('❌ Canvas animation error:', error);
+                // Attempt to recover or fallback to DOM mode
+                this.handleCanvasError(error);
             }
+        };
+
+        this.matrixState.canvasAnimationId = requestAnimationFrame(animate);
+        console.log('🎬 Canvas animation started');
+    },
+
+    handleCanvasContextLoss: function() {
+        if (this.matrixState.canvasRecoveryAttempted) {
+            console.error('❌ Canvas recovery failed, switching to DOM mode');
+            this.matrixConfig.renderMode = 'dom';
+            this.stopCanvasMatrix();
+            this.setupMatrixEffect();
+            return;
+        }
+
+        this.matrixState.canvasRecoveryAttempted = true;
+        
+        setTimeout(() => {
+            try {
+                this.matrixState.canvasContext = this.matrixState.canvas.getContext('2d');
+                if (this.matrixState.canvasContext) {
+                    console.log('✅ Canvas context recovered');
+                    this.matrixState.canvasRecoveryAttempted = false;
+                }
+            } catch (error) {
+                console.error('❌ Canvas recovery failed:', error);
+                this.matrixConfig.renderMode = 'dom';
+                this.stopCanvasMatrix();
+                this.setupMatrixEffect();
+            }
+        }, 1000);
+    },
+
+    handleCanvasError: function(error) {
+        console.error('❌ Canvas error occurred:', error);
+        
+        // Stop canvas animation to prevent error loops
+        if (this.matrixState.canvasAnimationId) {
+            cancelAnimationFrame(this.matrixState.canvasAnimationId);
+            this.matrixState.canvasAnimationId = null;
+        }
+
+        // Fallback to DOM mode if canvas is causing issues
+        if (error.message.includes('context') || error.message.includes('canvas')) {
+            console.log('🔄 Falling back to DOM matrix mode due to canvas error');
+            this.matrixConfig.renderMode = 'dom';
+            this.stopCanvasMatrix();
+            this.setupMatrixEffect();
+        }
+    },
+
+    drawCanvasMatrix: function(currentTime) {
+        const ctx = this.matrixState.canvasContext;
+        const canvas = this.matrixState.canvas;
+        const config = this.matrixConfig.canvasConfig;
+
+        if (!ctx || !canvas) return;
+
+        // Performance-based frame skipping for adaptive performance
+        if (config.adaptivePerformance && this.matrixState.avgFrameTime > 25) { // 40fps threshold
+            // Skip every other frame if performance is poor
+            if (this.matrixState.frameCount % 2 === 0) return;
+        }
+
+        // Clear canvas with fade effect (adjustable based on performance)
+        const fadeOpacity = config.adaptivePerformance && this.matrixState.avgFrameTime > 20 ? 0.06 : 0.04;
+        ctx.fillStyle = `rgba(0, 0, 0, ${fadeOpacity})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Set font
+        ctx.font = `${config.fontSize}px monospace`;
+        ctx.textAlign = 'center';
+
+        // Draw each drop with potential performance optimizations
+        this.matrixState.canvasDrops.forEach((drop, dropIndex) => {
+            this.updateCanvasDrop(drop, currentTime);
+            this.drawCanvasDrop(ctx, drop, dropIndex);
         });
 
-        // Close settings when clicking outside
-        document.addEventListener('click', (e) => {
-            const panel = document.getElementById('settings-panel');
-            const toggle = document.getElementById('settings-toggle');
-            
-            if (panel && !panel.classList.contains('hidden') && 
-                !panel.contains(e.target) && !toggle.contains(e.target)) {
-                panel.classList.add('hidden');
-            }
-        });
+        // Memory management - periodic cleanup
+        if (config.memoryManagement && this.matrixState.frameCount % 3600 === 0) { // Every minute at 60fps
+            this.performCanvasMemoryCleanup();
+        }
+    },
 
-        // Social sharing event tracking
-        const socialLinks = document.querySelectorAll('[id$="-share"]');
-        socialLinks.forEach(link => {
-            link.addEventListener('click', () => {
-                this.state.stats.quotesShared++;
-                this.saveStats();
-                this.playSound('click');
+    performCanvasMemoryCleanup: function() {
+        console.log('🧹 Performing canvas memory cleanup...');
+        
+        try {
+            // Force garbage collection of trail arrays that are too large
+            this.matrixState.canvasDrops.forEach(drop => {
+                if (drop.trail.length > drop.length * 1.5) {
+                    drop.trail = drop.trail.slice(0, drop.length);
+                }
             });
-        });
-    },
 
-    // Quote validation utility
-    validateQuoteData: function(quote) {
-        if (!quote || typeof quote !== 'object') return false;
-        if (!quote.text || typeof quote.text !== 'string' || quote.text.trim().length === 0) return false;
-        if (quote.text.length > 500) return false; // Reasonable length limit
-        if (quote.author && typeof quote.author !== 'string') return false;
-        if (quote.category && typeof quote.category !== 'string') return false;
-        return true;
-    },
-
-    // Get random quote from category
-    getRandomQuoteFromCategory: function(category = 'all', excludeQuote = null) {
-        try {
-            let filteredQuotes = category === 'all' ? this.quotes : this.quotes.filter(q => q.category === category);
-            if (excludeQuote) {
-                filteredQuotes = filteredQuotes.filter(q => 
-                    q.text !== excludeQuote.text || q.author !== excludeQuote.author
-                );
+            // Reset performance tracking occasionally
+            if (this.matrixState.frameCount > 216000) { // Reset after 1 hour at 60fps
+                this.matrixState.frameCount = 0;
+                this.matrixState.lastFrameTime = 0;
             }
-            if (filteredQuotes.length === 0) return null;
-            return filteredQuotes[Math.floor(Math.random() * filteredQuotes.length)];
+
         } catch (error) {
-            console.error('Error getting random quote:', error);
-            return this.quotes[0]; // Fallback to first quote
+            console.error('❌ Memory cleanup error:', error);
         }
     },
 
-    // Get all categories
-    getAllCategories: function() {
+    // Adaptive performance adjustment based on frame rate
+    adjustCanvasPerformance: function() {
+        const config = this.matrixConfig.canvasConfig;
+        
+        if (!config.adaptivePerformance) return;
+
+        const avgFrameTime = this.matrixState.avgFrameTime;
+        const targetFrameTime = 1000 / (config.maxFPS || 60);
+
+        if (avgFrameTime > targetFrameTime * 1.5) {
+            // Performance is poor, reduce quality
+            if (config.glowIntensity > 2) {
+                config.glowIntensity = Math.max(2, config.glowIntensity - 1);
+                console.log(`📉 Reduced glow intensity to ${config.glowIntensity} for performance`);
+            }
+        } else if (avgFrameTime < targetFrameTime * 0.8) {
+            // Performance is good, can increase quality
+            if (config.glowIntensity < 10) {
+                config.glowIntensity = Math.min(10, config.glowIntensity + 1);
+                console.log(`📈 Increased glow intensity to ${config.glowIntensity}`);
+            }
+        }
+    },
+
+    updateCanvasDrop: function(drop, currentTime) {
+        const config = this.matrixConfig.canvasConfig;
+        const canvas = this.matrixState.canvas;
+
+        // Add new character to trail head
+        if (currentTime - drop.lastCharChange > drop.charChangeInterval) {
+            const newChar = drop.characters[Math.floor(Math.random() * drop.characters.length)];
+            drop.trail.unshift(newChar);
+            drop.lastCharChange = currentTime;
+        }
+
+        // Limit trail length
+        if (drop.trail.length > drop.length) {
+            drop.trail.pop();
+        }
+
+        // Move drop
+        drop.y += drop.direction * drop.speed;
+
+        // Reset drop when off screen
+        if (drop.direction === 1 && drop.y * config.fontSize > canvas.height + drop.length * config.fontSize) {
+            // Moving down, reset from top
+            drop.y = -drop.length;
+            drop.direction = Math.random() < 0.5 ? 1 : -1;
+            drop.trail = [];
+        } else if (drop.direction === -1 && drop.y * config.fontSize < -drop.length * config.fontSize) {
+            // Moving up, reset from bottom
+            drop.y = canvas.height / config.fontSize + drop.length;
+            drop.direction = Math.random() < 0.5 ? 1 : -1;
+            drop.trail = [];
+        }
+    },
+
+    drawCanvasDrop: function(ctx, drop, dropIndex) {
+        const config = this.matrixConfig.canvasConfig;
+        const colors = this.matrixConfig.colors;
+        
+        // Calculate base color for this column using 6-color gradient
+        const ratio = dropIndex / (this.matrixState.canvasDrops.length - 1);
+        const baseColor = this.interpolateCanvasColors(colors, ratio);
+
+        // Draw each character in the trail
+        drop.trail.forEach((char, charIndex) => {
+            let charY;
+            
+            if (drop.direction === 1) {
+                charY = (drop.y - charIndex) * config.fontSize;
+            } else {
+                charY = (drop.y + charIndex) * config.fontSize;
+            }
+
+            // Calculate opacity for fading effect
+            const trailOpacity = Math.max(0, 1 - (charIndex / drop.trail.length));
+            const finalOpacity = trailOpacity * drop.opacity;
+
+            // Apply color with opacity
+            const r = parseInt(baseColor.r * finalOpacity);
+            const g = parseInt(baseColor.g * finalOpacity);
+            const b = parseInt(baseColor.b * finalOpacity);
+
+            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+            
+            // Add glow effect
+            if (config.glowIntensity > 0) {
+                ctx.shadowColor = `rgb(${r}, ${g}, ${b})`;
+                ctx.shadowBlur = config.glowIntensity * finalOpacity;
+            }
+
+            // Draw character
+            ctx.fillText(char, drop.x + config.columnSpacing / 2, charY);
+        });
+
+        // Reset shadow for next draw
+        ctx.shadowBlur = 0;
+    },
+
+    interpolateCanvasColors: function(colors, ratio) {
+        if (!colors || colors.length === 0) {
+            return { r: 0, g: 255, b: 0 }; // Default green
+        }
+
+        const segmentSize = 1 / (colors.length - 1);
+        const segmentIndex = Math.floor(ratio / segmentSize);
+        const segmentRatio = (ratio % segmentSize) / segmentSize;
+
+        const color1 = this.hexToRgb(colors[segmentIndex] || colors[0]);
+        const color2 = this.hexToRgb(colors[segmentIndex + 1] || colors[colors.length - 1]);
+
+        return {
+            r: Math.round(color1.r + (color2.r - color1.r) * segmentRatio),
+            g: Math.round(color1.g + (color2.g - color1.g) * segmentRatio),
+            b: Math.round(color1.b + (color2.b - color1.b) * segmentRatio)
+        };
+    },
+
+    hexToRgb: function(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 0, g: 255, b: 0 };
+    },
+
+    stopCanvasMatrix: function() {
+        console.log('🛑 Stopping Canvas Matrix Rain...');
+
         try {
-            const categories = [...new Set(this.quotes.map(q => q.category))];
-            return categories.sort();
+            // Stop animation loop
+            if (this.matrixState.canvasAnimationId) {
+                cancelAnimationFrame(this.matrixState.canvasAnimationId);
+                this.matrixState.canvasAnimationId = null;
+            }
+
+            // Hide canvas
+            if (this.matrixState.canvas) {
+                this.matrixState.canvas.style.display = 'none';
+            }
+
+            // Clear drops array
+            this.matrixState.canvasDrops = [];
+
+            // Remove resize listener
+            if (this.matrixState.canvasResizeHandler) {
+                window.removeEventListener('resize', this.matrixState.canvasResizeHandler);
+                this.matrixState.canvasResizeHandler = null;
+            }
+
+            // Clear performance tracking
+            this.matrixState.lastFrameTime = 0;
+            this.matrixState.frameCount = 0;
+
+            // Clear canvas if available
+            if (this.matrixState.canvasContext && this.matrixState.canvas) {
+                this.matrixState.canvasContext.clearRect(0, 0, this.matrixState.canvas.width, this.matrixState.canvas.height);
+            }
+
+            console.log('✅ Canvas Matrix Rain stopped successfully');
+
         } catch (error) {
-            console.error('Error getting categories:', error);
-            return ['love', 'perseverance', 'originality'];
+            console.error('❌ Error stopping Canvas Matrix:', error);
+        }
+    },
+
+    refreshCanvasColors: function() {
+        if (!this.matrixState.canvas || !this.matrixState.canvasDrops.length) return;
+
+        console.log('🎨 Refreshing Canvas Matrix colors...');
+
+        try {
+            // Colors are automatically applied in the drawing loop via this.matrixConfig.colors
+            // This function exists for any future color-specific optimizations or caching
+            
+            // Optionally, we could pre-calculate color gradients for performance
+            const colors = this.matrixConfig.colors;
+            if (colors && colors.length > 0) {
+                // The color interpolation happens in real-time during drawing
+                // This ensures the canvas always uses the latest theme colors
+                console.log(`✅ Canvas colors refreshed using palette: [${colors.join(', ')}]`);
+            }
+
+        } catch (error) {
+            console.error('❌ Error refreshing Canvas Matrix colors:', error);
+        }
+    },
+
+    // ===== RENDERING MODE SWITCHING =====
+    switchMatrixRenderMode: function(newMode) {
+        if (!['dom', 'canvas', 'hybrid'].includes(newMode)) {
+            console.warn(`⚠️ Invalid render mode: ${newMode}`);
+            return;
+        }
+
+        const oldMode = this.matrixConfig.renderMode;
+        if (oldMode === newMode) return;
+
+        console.log(`🔄 Switching matrix render mode: ${oldMode} → ${newMode}`);
+
+        try {
+            // Stop all current matrix effects
+            this.stopAllMatrixEffects();
+
+            // Update configuration
+            this.matrixConfig.renderMode = newMode;
+
+            // Start effects for new mode (if effects are enabled)
+            if (this.state.effectsEnabled) {
+                this.startMatrixEffectsForCurrentMode();
+            }
+
+            console.log(`✅ Matrix render mode switched to: ${newMode}`);
+
+        } catch (error) {
+            console.error('❌ Error switching matrix render mode:', error);
+            // Fallback to DOM mode on error
+            this.matrixConfig.renderMode = 'dom';
+            this.startMatrixEffectsForCurrentMode();
+        }
+    },
+
+    stopAllMatrixEffects: function() {
+        // Stop DOM matrix effect
+        this.stopMatrixEffect();
+        
+        // Stop Canvas matrix effect
+        this.stopCanvasMatrix();
+    },
+
+    startMatrixEffectsForCurrentMode: function() {
+        const mode = this.matrixConfig.renderMode;
+        
+        // Start DOM matrix (for 'dom' and 'hybrid' modes)
+        if (mode === 'dom' || mode === 'hybrid') {
+            this.setupMatrixEffect();
+        }
+        
+        // Start Canvas matrix (for 'canvas' and 'hybrid' modes)
+        if (mode === 'canvas' || mode === 'hybrid') {
+            this.initializeCanvasMatrix();
+        }
+    },
+
+    // Helper function to update matrix render mode from settings panel
+    updateMatrixRenderMode: function(mode) {
+        this.switchMatrixRenderMode(mode);
+        
+        // Update UI to reflect the change
+        const selector = document.getElementById('matrix-render-mode');
+        if (selector && selector.value !== mode) {
+            selector.value = mode;
+        }
+
+        // Show/hide canvas performance settings based on mode
+        this.toggleCanvasPerformanceSettings(mode === 'canvas' || mode === 'hybrid');
+    },
+
+    toggleCanvasPerformanceSettings: function(show) {
+        const settings = document.getElementById('canvas-performance-settings');
+        if (settings) {
+            if (show) {
+                settings.classList.remove('hidden');
+            } else {
+                settings.classList.add('hidden');
+            }
         }
     }
 };
 
-// ===== UTILITY ANIMATIONS =====
-// Add floating heart animation to CSS dynamically
-const style = document.createElement('style');
-style.textContent = `
-@keyframes floatUp {
-    0% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: translateY(-100px) scale(0.5);
-    }
-}
-`;
-document.head.appendChild(style);
-
-// ===== INITIALIZATION =====
+// Wait for the DOM to be fully loaded before initializing the application
 document.addEventListener('DOMContentLoaded', () => {
     VibeMe.init();
 });
