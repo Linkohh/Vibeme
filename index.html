@@ -1,0 +1,1832 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="VibeMe - A beautiful motivational quote generator with dynamic themes and inspiring messages">
+    <meta name="keywords" content="quotes, motivation, inspiration, wellness, mindfulness, personal growth">
+    <meta name="author" content="VibeMe">
+    <meta name="theme-color" content="#aaaaaa">
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="VibeMe - Motivational Quote Generator">
+    <meta property="og:description" content="Discover inspiring quotes with beautiful animations and dynamic themes">
+    <meta property="og:image" content="/assets/og-image.jpg">
+    <meta property="og:url" content="https://vibeme.app">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="VibeMe - Motivational Quote Generator">
+    <meta name="twitter:description" content="Discover inspiring quotes with beautiful animations and dynamic themes">
+    <meta name="twitter:image" content="/assets/twitter-image.jpg">
+    
+    <title>VibeMe - Motivational Quote Generator</title>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&display=swap" as="style">
+    <link rel="preload" href="quotes.json" as="fetch">
+    <link rel="preload" href="data/quotes.json" as="fetch">
+    
+    <!-- Frameworks & libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    
+    <!-- Google Fonts with display=swap for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Dancing+Script:wght@400..700&family=Merriweather:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Slab:wght@400;700&family=Oswald:wght@400;700&family=Montserrat:ital,wght@0,400;0,600;1,400&family=Lato:ital,wght@0,400;0,700;1,400&family=Nunito:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:ital,wght@0,400;0,600;1,400&family=Raleway:ital,wght@0,400;0,600;1,400&family=Roboto+Mono:ital,wght@0,400;0,600;1,400&family=Comfortaa&display=swap" rel="stylesheet">
+    
+    <!-- Project-specific stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Favicon and icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    
+    <!-- Performance and security -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    
+    <!-- Structured data for SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "VibeMe",
+        "description": "A beautiful motivational quote generator with dynamic themes and inspiring messages",
+        "url": "https://vibeme.app",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+    </script>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-0 gradient-bg">
+    <!-- Skip link for accessibility -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-blue-600 text-white px-4 py-2 rounded z-50">
+        Skip to main content
+    </a>
+    
+    <!-- Screen reader live region for meridiem announcements -->
+    <span id="sr-meridiem" class="sr-only" aria-live="polite"></span>
+    
+    <!-- Decorative background effects -->
+    <div id="mouse-glow" class="mouse-glow" aria-hidden="true"></div>
+    <div id="matrix-bg" class="matrix-bg" aria-hidden="true"></div>
+    <canvas id="matrix-canvas" class="matrix-canvas" aria-hidden="true"></canvas>
+
+    <!-- Top controls -->
+    <div class="fixed top-4 right-4 z-[10001] flex space-x-2">
+        <!-- Dark mode toggle -->
+        <button id="dark-mode-toggle" type="button"
+                class="cursor-pointer p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-300"
+                aria-label="Toggle dark mode"
+                title="Toggle dark/light mode">
+            <i class="fas fa-moon text-white text-lg" aria-hidden="true"></i>
+        </button>
+        
+        <!-- Settings toggle -->
+        <button id="settings-toggle" type="button"
+                class="cursor-pointer p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-300"
+                aria-label="Open settings menu"
+                aria-expanded="false"
+                aria-controls="settings-panel">
+            <i class="fas fa-cog text-white text-lg" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <!-- Date mount (top-left) -->
+    <div id="date-mount" class="fc-date" aria-live="off" aria-label="Today's date">
+      <time id="date-time" datetime=""></time>
+    </div>
+
+    <!-- Settings panel -->
+    <div id="settings-panel" 
+         class="hidden fixed top-16 right-4 z-[10000] bg-black/70 backdrop-blur-md p-4 rounded-lg shadow-xl text-white space-y-3 w-60 max-h-[80vh] overflow-y-auto pr-1"
+         role="dialog"
+         aria-labelledby="settings-title"
+         aria-hidden="true">
+        
+        <h2 id="settings-title" class="text-lg font-semibold mb-3">Settings</h2>
+        
+        <div class="space-y-3">
+            <label for="effects-toggle-checkbox" class="flex items-center cursor-pointer text-sm">
+                <input type="checkbox" 
+                       id="effects-toggle-checkbox"
+                       class="mr-2 accent-pink-500 h-4 w-4"
+                       aria-describedby="effects-description"
+                       checked>
+                <span>Visual Effects</span>
+            </label>
+            <p id="effects-description" class="text-xs text-gray-300">
+                Toggle mouse glow and matrix background effects
+            </p>
+
+            <!-- Mouse Glow Customization -->
+            <div id="glow-controls" class="space-y-2 border-t border-gray-600 pt-3">
+                <h3 class="text-sm font-semibold text-gray-200">Mouse Glow</h3>
+                
+                <div class="space-y-2">
+                    <label for="glow-intensity" class="flex items-center justify-between text-xs">
+                        <span>Intensity</span>
+                        <span id="glow-intensity-value">90%</span>
+                    </label>
+                    <input type="range" 
+                           id="glow-intensity" 
+                           min="0" 
+                           max="100" 
+                           value="90"
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-pink-500">
+                    
+                    <label for="glow-size" class="flex items-center justify-between text-xs">
+                        <span>Size</span>
+                        <span id="glow-size-value">100px</span>
+                    </label>
+                    <input type="range" 
+                           id="glow-size" 
+                           min="50" 
+                           max="200" 
+                           value="100"
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-pink-500">
+                    
+                    <label for="glow-tracking" class="flex items-center cursor-pointer text-xs">
+                        <input type="checkbox" 
+                               id="glow-tracking"
+                               class="mr-2 accent-pink-500 h-3 w-3"
+                               checked>
+                        <span>Precision Tracking</span>
+                    </label>
+                    <p class="text-xs text-gray-400">Ultra-smooth cursor following</p>
+                </div>
+            </div>
+
+            <!-- Audio Announcements (TTS) -->
+            <div class="space-y-2 border-t border-gray-600 pt-3">
+              <h3 class="text-sm font-semibold text-gray-200">🗣️ Audio Announcements</h3>
+
+              <label for="tts-enable-checkbox" class="flex items-center cursor-pointer text-xs">
+                <input type="checkbox" id="tts-enable-checkbox" class="mr-2 accent-green-500 h-3 w-3">
+                <span>Read quotes aloud</span>
+              </label>
+
+              <label for="tts-rate" class="flex items-center justify-between text-xs">
+                <span>Speech Speed</span>
+                <span id="tts-rate-value">1.0x</span>
+              </label>
+              <input type="range" id="tts-rate" min="0.7" max="1.5" step="0.1"
+                     class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500">
+
+              <!-- Beep toggle (inserted after tts-rate range) -->
+              <label for="beep-enable-checkbox" class="flex items-center cursor-pointer text-xs mt-2">
+                <input type="checkbox" id="beep-enable-checkbox" class="mr-2 accent-blue-500 h-3 w-3" checked>
+                <span>Beep before quote changes</span>
+              </label>
+              <p class="text-[10px] text-gray-400">
+                Helpful for blind/low‑vision users. Turn off if you prefer silent transitions.
+              </p>
+
+              <p class="text-[11px] text-gray-400 mt-1">
+                Enabling "Audio Announcements" will read quotes aloud. If you use a screen reader,
+                you may prefer to keep this off to avoid duplicate speech.
+              </p>
+
+              <!-- Voice & controls -->
+              <div class="space-y-2">
+                <label for="tts-voice" class="text-xs text-gray-300">Voice</label>
+                <select id="tts-voice" class="w-full text-black p-1 rounded text-xs">
+                  <!-- Populated by JS -->
+                </select>
+
+                <button id="tts-preview-btn" type="button"
+                        class="w-full text-xs bg-gray-500/80 hover:bg-gray-600/80 px-2 py-1.5 rounded transition-colors">
+                  Preview selected voice
+                </button>
+
+                <p class="text-[10px] text-gray-400">
+                  Tip: If you use a screen reader, keep "Read quotes aloud" off to avoid duplicate audio.
+                </p>
+              </div>
+            </div>
+
+            <button id="clear-favorites-btn" type="button"
+                    class="w-full text-sm bg-red-500/80 hover:bg-red-600/80 px-2 py-1.5 rounded transition-colors"
+                    aria-describedby="clear-favorites-description">
+                Clear Favorites
+            </button>
+            <p id="clear-favorites-description" class="text-xs text-gray-300">
+                Remove all saved favorite quotes
+            </p>
+
+            <button id="toggle-add-quote-form" type="button"
+                    class="w-full text-sm bg-green-500/80 hover:bg-green-600/80 px-2 py-1.5 rounded transition-colors"
+                    aria-expanded="false"
+                    aria-controls="add-quote-form">
+                Add Custom Quote
+            </button>
+
+            <div id="add-quote-form" class="hidden mt-2 space-y-2" role="region" aria-labelledby="add-quote-title">
+                <h3 id="add-quote-title" class="sr-only">Add Custom Quote Form</h3>
+                
+                <!-- Security notice -->
+                <div class="text-xs text-yellow-300 bg-yellow-900/20 p-2 rounded border border-yellow-500/30">
+                    <i class="fas fa-shield-alt mr-1"></i>
+                    Quotes are filtered for inappropriate content
+                </div>
+                
+                <label for="new-quote-text" class="sr-only">Quote text</label>
+                <textarea id="new-quote-text" 
+                          rows="3"
+                          class="w-full text-black p-2 rounded resize-none"
+                          placeholder="Enter your inspirational quote..."
+                          maxlength="300"
+                          aria-describedby="quote-text-help"></textarea>
+                <div class="flex justify-between text-xs text-gray-300">
+                    <span id="quote-text-help">Must be positive and appropriate</span>
+                    <span id="char-counter">0/300</span>
+                </div>
+                
+                <label for="new-quote-author" class="sr-only">Author name (optional)</label>
+                <input id="new-quote-author" 
+                       type="text"
+                       class="w-full text-black p-1 rounded"
+                       placeholder="Author (optional)"
+                       maxlength="50">
+                
+                <!-- Validation feedback -->
+                <div id="quote-validation" class="text-xs hidden"></div>
+                
+                <button id="submit-quote-btn" type="button"
+                        class="w-full text-sm bg-blue-500/80 hover:bg-blue-600/80 px-2 py-1.5 rounded transition-colors disabled:opacity-50"
+                        disabled>
+                    Add Quote
+                </button>
+            </div>
+
+            <!-- Color Customization Controls -->
+            <div id="color-controls" class="space-y-3 border-t border-gray-600 pt-3">
+                <h3 class="text-sm font-semibold text-gray-200">🎨 Color Customization</h3>
+                
+                <!-- Color Harmony Selector -->
+                <div class="space-y-2">
+                    <label for="harmony-type" class="text-xs text-gray-300">Color Harmony</label>
+                    <select id="harmony-type" 
+                            class="w-full text-black p-1 rounded text-xs">
+                        <option value="auto">🎲 Auto (Intelligent)</option>
+                        <option value="analogous">🌊 Analogous (Peaceful)</option>
+                        <option value="triadic">⚡ Triadic (Energetic)</option>
+                        <option value="complementary">🔥 Complementary (Bold)</option>
+                        <option value="split-complementary">🌟 Split-Complementary</option>
+                        <option value="monochromatic">🎯 Monochromatic (Subtle)</option>
+                        <option value="vibrant">💎 Vibrant (Dynamic)</option>
+                    </select>
+                </div>
+
+                <!-- Theme Preset Selector (keeps existing controls untouched) -->
+                <div class="space-y-2 mt-2">
+                    <label for="theme-preset" class="text-xs text-gray-300">Theme Preset</label>
+                    <select id="theme-preset" class="w-full text-black p-1 rounded text-xs">
+                        <option value="auto">🎯 Auto (by quote category)</option>
+                        <option value="retro_neon">🕹️ Retro Neon</option>
+                        <option value="desert_dusk">🌵 Desert Dusk</option>
+                        <option value="lavender_glow">💜 Lavender Glow</option>
+                        <option value="midnight_arcade">🌌 Midnight Arcade</option>
+                        <option value="punchy_reds">🔥 Punchy Reds</option>
+                    </select>
+                    <p class="text-[10px] text-gray-400">Applies to gradient, glass, text contrast, glow & matrix.</p>
+                </div>
+
+                <!-- Vibrancy Control -->
+                <div class="space-y-2">
+                    <label for="vibrancy-slider" class="flex items-center justify-between text-xs">
+                        <span>Vibrancy</span>
+                        <span id="vibrancy-value">70%</span>
+                    </label>
+                    <input type="range" 
+                           id="vibrancy-slider" 
+                           min="0" 
+                           max="100" 
+                           value="70"
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                    <p class="text-xs text-gray-400">Controls color saturation intensity</p>
+                </div>
+
+                <!-- Warmth Control -->
+                <div class="space-y-2">
+                    <label for="warmth-slider" class="flex items-center justify-between text-xs">
+                        <span>Warmth</span>
+                        <span id="warmth-value">50%</span>
+                    </label>
+                    <input type="range" 
+                           id="warmth-slider" 
+                           min="0" 
+                           max="100" 
+                           value="50"
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500">
+                    <p class="text-xs text-gray-400">Cool colors ← → Warm colors</p>
+                </div>
+
+                <!-- Base Color Picker -->
+                <div class="space-y-2">
+                    <label for="base-color-picker" class="text-xs text-gray-300">Base Color (Optional)</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="color" 
+                               id="base-color-picker" 
+                               class="w-8 h-8 rounded cursor-pointer">
+                        <button id="random-color-btn" type="button"
+                                class="flex-1 text-xs bg-purple-500/80 hover:bg-purple-600/80 px-2 py-1 rounded transition-colors">
+                            🎲 Random
+                        </button>
+                        <button id="clear-base-color-btn" type="button"
+                                class="flex-1 text-xs bg-gray-500/80 hover:bg-gray-600/80 px-2 py-1 rounded transition-colors">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Accessibility Toggle -->
+                <div class="space-y-2">
+                    <label for="accessibility-mode" class="flex items-center cursor-pointer text-xs">
+                        <input type="checkbox" 
+                               id="accessibility-mode"
+                               class="mr-2 accent-green-500 h-3 w-3"
+                               checked>
+                        <span>♿ Accessibility Mode</span>
+                    </label>
+                    <p class="text-xs text-gray-400">Ensures WCAG contrast compliance</p>
+                </div>
+
+                <!-- Matrix Visibility -->
+                <div class="space-y-2">
+                    <label for="matrix-opacity" class="flex items-center justify-between text-xs">
+                        <span>Matrix Visibility</span>
+                        <span id="matrix-opacity-value">80%</span>
+                    </label>
+                    <input type="range" 
+                           id="matrix-opacity" 
+                           min="0" 
+                           max="100" 
+                           value="80"
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500">
+                </div>
+
+                <!-- Advanced Matrix Controls -->
+                <div class="space-y-3 border-t border-gray-600 pt-3">
+                    <h4 class="text-xs font-semibold text-gray-200">🔮 Advanced Matrix</h4>
+                    
+                    <!-- Matrix Intensity -->
+                    <div class="space-y-2">
+                        <label for="matrix-intensity" class="flex items-center justify-between text-xs">
+                            <span>Matrix Intensity</span>
+                            <span id="matrix-intensity-value">100%</span>
+                        </label>
+                        <input type="range" 
+                               id="matrix-intensity" 
+                               min="50" 
+                               max="200" 
+                               value="100"
+                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                        <p class="text-xs text-gray-400">Controls glow strength and pop effect</p>
+                    </div>
+
+                    <!-- Animation Speed -->
+                    <div class="space-y-2">
+                        <label for="matrix-speed" class="flex items-center justify-between text-xs">
+                            <span>Animation Speed</span>
+                            <span id="matrix-speed-value">1.0x</span>
+                        </label>
+                        <input type="range" 
+                               id="matrix-speed" 
+                               min="0.5" 
+                               max="2.0" 
+                               step="0.1"
+                               value="1.0"
+                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500">
+                        <p class="text-xs text-gray-400">Slower = more readable, Faster = more dynamic</p>
+                    </div>
+
+                    <!-- Contrast Boost -->
+                    <div class="space-y-2">
+                        <label for="matrix-high-contrast" class="flex items-center cursor-pointer text-xs">
+                            <input type="checkbox" 
+                                   id="matrix-high-contrast"
+                                   class="mr-2 accent-red-500 h-3 w-3">
+                            <span>🔥 High Contrast Mode</span>
+                        </label>
+                        <p class="text-xs text-gray-400">Forces maximum visibility on any background</p>
+                    </div>
+
+                    <!-- Blend Mode Override -->
+                    <div class="space-y-2">
+                        <label for="matrix-blend-mode" class="text-xs text-gray-300">Blend Mode</label>
+                        <select id="matrix-blend-mode" 
+                                class="w-full text-black p-1 rounded text-xs">
+                            <option value="auto">🎯 Auto (Intelligent)</option>
+                            <option value="dark-bg">🌟 Screen (Classic Glow)</option>
+                            <option value="light-bg">⚫ Multiply (Sharp Dark)</option>
+                            <option value="high-contrast">🔥 Difference (Maximum Pop)</option>
+                        </select>
+                        <p class="text-xs text-gray-400">Manual override for blend effects</p>
+                    </div>
+
+                    <!-- Stream Density -->
+                    <div class="space-y-2">
+                        <label for="matrix-density" class="flex items-center justify-between text-xs">
+                            <span>Stream Density</span>
+                            <span id="matrix-density-value">1.5x</span>
+                        </label>
+                        <input type="range" 
+                               id="matrix-density" 
+                               min="0.5" 
+                               max="3.0" 
+                               step="0.1"
+                               value="1.5"
+                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                        <p class="text-xs text-gray-400">Balance visual impact vs. performance</p>
+                    </div>
+
+                    <!-- Rendering Mode -->
+                    <div class="space-y-2 border-t border-gray-700 pt-3">
+                        <label for="matrix-render-mode" class="text-xs text-gray-300">🎮 Rendering Engine</label>
+                        <select id="matrix-render-mode" 
+                                class="w-full text-black p-1 rounded text-xs">
+                            <option value="dom">🏠 DOM (Classic)</option>
+                            <option value="canvas">🎨 Canvas (Performance)</option>
+                            <option value="hybrid">⚡ Hybrid (Best of Both)</option>
+                        </select>
+                        <p class="text-xs text-gray-400">Canvas = smoother, DOM = compatible</p>
+                    </div>
+
+                    <!-- Canvas Performance -->
+                    <div id="canvas-performance-settings" class="space-y-2 hidden">
+                        <h5 class="text-xs font-medium text-cyan-300">Canvas Performance</h5>
+                        
+                        <div class="space-y-2">
+                            <label for="canvas-max-fps" class="flex items-center justify-between text-xs">
+                                <span>Max FPS</span>
+                                <span id="canvas-max-fps-value">60</span>
+                            </label>
+                            <input type="range" 
+                                   id="canvas-max-fps" 
+                                   min="30" 
+                                   max="120" 
+                                   step="15"
+                                   value="60"
+                                   class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500">
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="canvas-adaptive-performance" class="flex items-center cursor-pointer text-xs">
+                                <input type="checkbox" 
+                                       id="canvas-adaptive-performance"
+                                       class="mr-2 accent-cyan-500 h-3 w-3"
+                                       checked>
+                                <span>🧠 Adaptive Performance</span>
+                            </label>
+                            <p class="text-xs text-gray-400">Auto-adjusts quality based on device performance</p>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="canvas-memory-management" class="flex items-center cursor-pointer text-xs">
+                                <input type="checkbox" 
+                                       id="canvas-memory-management"
+                                       class="mr-2 accent-cyan-500 h-3 w-3"
+                                       checked>
+                                <span>🧹 Memory Management</span>
+                            </label>
+                            <p class="text-xs text-gray-400">Prevents memory leaks with cleanup cycles</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Color Preview -->
+                <div class="space-y-2">
+                    <label class="text-xs text-gray-300">Color Preview</label>
+                    <div class="flex space-x-1 h-8 rounded overflow-hidden">
+                        <div id="color-preview-1" class="flex-1 bg-purple-500"></div>
+                        <div id="color-preview-2" class="flex-1 bg-blue-500"></div>
+                        <div id="color-preview-3" class="flex-1 bg-teal-500"></div>
+                    </div>
+                    <button id="apply-colors-btn" type="button"
+                            class="w-full text-xs bg-indigo-500/80 hover:bg-indigo-600/80 px-2 py-1.5 rounded transition-colors">
+                        ✨ Apply New Colors
+                    </button>
+                </div>
+
+                <!-- Matrix Preset Selector (injected non-destructively) -->
+                <div id="matrix-preset-wrapper" class="space-y-2 mt-3">
+                    <label for="matrix-preset" class="text-xs text-gray-300">Matrix Preset</label>
+                    <select id="matrix-preset" class="w-full text-black p-1 rounded text-xs">
+                        <option value="auto">🎯 Auto (by quote category)</option>
+                        <option value="neon_rain">🌧️ Rain Matrix (Neon)</option>
+                        <option value="dual_drift">⇵ Dual Drift</option>
+                        <option value="aurora_waves">🌊 Aurora Waves</option>
+                        <option value="glyph_storm">⚡ Glyph Storm</option>
+                        <option value="lowkey_minimal">🌫️ Low-Key Minimal</option>
+                    </select>
+                    <p class="text-[10px] text-gray-400">Changes density, speed, trails, direction & symbols; colors follow the active theme.</p>
+                </div>
+<div id="category-filter-wrap" class="space-y-2 mt-4">
+  <label for="category-filter" class="text-xs text-gray-300">Quote Category</label>
+  <select id="category-filter" class="w-full text-black p-1 rounded text-xs">
+    <option value="all">All</option>
+    <option value="love">Love</option>
+    <option value="perseverance">Perseverance</option>
+    <option value="wisdom">Wisdom</option>
+    <option value="originality">Originality</option>
+    <option value="change">Change</option>
+    <option value="inner_strength">Inner Strength</option>
+    <option value="famous_quotes">Famous</option>
+  </select>
+</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <main id="main-content" class="container mx-auto max-w-4xl relative z-10 pt-8">
+        <!-- App Title Bar (centered, outside the quote box) -->
+        <div id="app-title-bar" class="app-title-bar" role="banner" aria-label="Application Title">
+          <h1 class="vb-logo heading-font" data-title="VibeMe">VibeMe</h1>
+          <span class="logo-underline" aria-hidden="true"></span>
+          <!-- Flip clock mount (directly under the VibeMe title) -->
+          <div id="flip-clock-mount" class="flip-clock-mount" data-skin="v2" aria-label="Current time" role="timer"></div>
+        </div>
+        <!-- Anchor bar lives directly under the title -->
+        <!-- If this block already exists, skip (JS will also ensure it at runtime) -->
+        <div class="quote-container-outer">
+            <div class="quote-container-inner">
+                <div class="quote-pattern" id="quote-pattern" aria-hidden="true"></div>
+                <div class="relative z-10">
+                    <!-- App title -->
+                    <header>
+                        
+                    </header>
+
+                    <!-- Quote display area -->
+                    <section class="quote-animation-container text-center mb-8 min-h-[120px] md:min-h-[150px]"
+                             aria-live="polite" aria-atomic="true">
+                        <blockquote>
+                            <p id="quote-text"
+                               class="quote-text-font text-2xl md:text-3xl mb-4 leading-relaxed dynamic-text-main quote-text-animate">
+                               The only way to do great work is to love what you do.
+                            </p>
+                            <footer>
+                                <cite id="quote-author"
+                                      class="text-lg italic dynamic-text-secondary author-font author-animate">
+                                      — Steve Jobs
+                                </cite>
+                            </footer>
+                        </blockquote>
+
+                        <!-- Inline TTS controls (shown only when TTS is supported/enabled) -->
+                        <div id="tts-inline-controls" class="flex items-center justify-center space-x-2 mt-4" hidden>
+                            <!-- Primary: Speak / Stop toggle -->
+                            <button id="tts-toggle-btn" type="button"
+                                    class="action-button p-2 bg-white/10 hover:bg-white/20 rounded-full"
+                                    aria-label="Read quote aloud" aria-pressed="false" title="Read aloud">
+                              <i class="fas fa-volume-up" aria-hidden="true"></i>
+                            </button>
+
+                            <!-- Secondary: Replay (optional; keep if you want a visible replay) -->
+                            <button id="tts-replay-btn" type="button"
+                                    class="action-button p-2 bg-white/10 hover:bg-white/20 rounded-full"
+                                    aria-label="Replay audio" title="Replay">
+                              <i class="fas fa-rotate-right" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </section>
+
+                    <!-- Action buttons -->
+                    <section class="flex justify-center items-center space-x-3 mb-6 text-xl" 
+                             aria-label="Quote actions">
+                        <button id="copy-quote-btn" type="button"
+                                title="Copy quote to clipboard"
+                                class="dynamic-text-secondary hover:text-white/80 transition-colors p-2 rounded-full hover:bg-white/10 action-button"
+                                aria-label="Copy quote to clipboard">
+                            <i class="fas fa-copy" aria-hidden="true"></i>
+                        </button>
+                        
+                        <button id="favorite-quote-btn" type="button"
+                                title="Add to favorites"
+                                class="dynamic-text-secondary hover:text-white/80 transition-colors p-2 rounded-full hover:bg-white/10 action-button"
+                                aria-label="Add quote to favorites">
+                            <i class="far fa-heart" aria-hidden="true"></i>
+                        </button>
+                        
+                        <!-- Rating buttons -->
+                        <button id="rate-up-btn" type="button"
+                                title="Rate this quote positively"
+                                class="dynamic-text-secondary hover:text-green-400 transition-colors p-2 rounded-full hover:bg-white/10 action-button"
+                                aria-label="Rate quote positively">
+                            <i class="far fa-thumbs-up" aria-hidden="true"></i>
+                        </button>
+                        
+                        <button id="rate-down-btn" type="button"
+                                title="Rate this quote negatively"
+                                class="dynamic-text-secondary hover:text-red-400 transition-colors p-2 rounded-full hover:bg-white/10 action-button"
+                                aria-label="Rate quote negatively">
+                            <i class="far fa-thumbs-down" aria-hidden="true"></i>
+                        </button>
+                    </section>
+
+                    <!-- Generation controls -->
+                    <section class="flex flex-col items-center space-y-6" aria-label="Quote generation">
+                        <button id="generate-btn" type="button"
+                                class="generate-btn font-semibold"
+                                aria-label="Generate new inspirational quote">
+                            <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                            <span class="text-sm">New Vibe</span>
+                        </button>
+
+                        <div class="flex items-center dynamic-text-secondary text-sm space-x-3" 
+                             aria-label="Auto-generation timer">
+                            <button id="timer-toggle-btn" type="button"
+                                    title="Pause automatic quote generation"
+                                    class="hover:text-white/80 transition-colors"
+                                    aria-label="Pause automatic quote generation">
+                                <i class="fas fa-pause" aria-hidden="true"></i>
+                            </button>
+                            <span>
+                                New quote in <span id="countdown">10</span> seconds
+                            </span>
+                        </div>
+
+                        <!-- Social sharing -->
+                        <nav class="flex space-x-3 md:space-x-4 mt-6" 
+                             aria-label="Share quote on social media">
+                            <a href="#" id="twitter-share" 
+                               target="_blank" 
+                               rel="noopener noreferrer"
+                               class="social-bubble"
+                               aria-label="Share on Twitter"
+                               title="Share on Twitter">
+                                <i class="fab fa-twitter" aria-hidden="true"></i>
+                            </a>
+                            <a href="#" id="facebook-share" 
+                               target="_blank" 
+                               rel="noopener noreferrer"
+                               class="social-bubble"
+                               aria-label="Share on Facebook"
+                               title="Share on Facebook">
+                                <i class="fab fa-facebook-f" aria-hidden="true"></i>
+                            </a>
+                            <a href="#" id="linkedin-share" 
+                               target="_blank" 
+                               rel="noopener noreferrer"
+                               class="social-bubble"
+                               aria-label="Share on LinkedIn"
+                               title="Share on LinkedIn">
+                                <i class="fab fa-linkedin-in" aria-hidden="true"></i>
+                            </a>
+                            <a href="#" id="whatsapp-share" 
+                               target="_blank" 
+                               rel="noopener noreferrer"
+                               class="social-bubble"
+                               aria-label="Share on WhatsApp"
+                               title="Share on WhatsApp">
+                                <i class="fab fa-whatsapp" aria-hidden="true"></i>
+                            </a>
+                            <a href="#" id="pinterest-share" 
+                               target="_blank" 
+                               rel="noopener noreferrer"
+                               class="social-bubble"
+                               aria-label="Share on Pinterest"
+                               title="Share on Pinterest">
+                                <i class="fab fa-pinterest-p" aria-hidden="true"></i>
+                            </a>
+                        </nav>
+                    </section>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Feedback messages -->
+        <p id="copy-feedback"
+           class="text-center text-sm dynamic-text-secondary mt-3 h-4"></p>
+    </main>
+
+    <!-- Keyboard shortcuts help (hidden, can be shown with ? key) -->
+    <div id="keyboard-help" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" role="dialog" aria-labelledby="keyboard-help-title" aria-modal="true" tabindex="-1">
+        <div class="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h2 id="keyboard-help-title" class="text-xl font-bold mb-4 text-gray-800">Keyboard Shortcuts</h2>
+            <dl class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <dt class="font-medium">Space / Enter:</dt>
+                    <dd>Generate new quote</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="font-medium">F:</dt>
+                    <dd>Toggle favorite</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="font-medium">C:</dt>
+                    <dd>Copy quote</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="font-medium">T:</dt>
+                    <dd>Toggle timer</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="font-medium">Escape:</dt>
+                    <dd>Close panels</dd>
+                </div>
+            </dl>
+            <button type="button" onclick="document.getElementById('keyboard-help').classList.add('hidden')" 
+                    class="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Enhanced JavaScript - Non-Module System for CORS Compatibility -->
+    <script src="js/main.js"></script>
+
+    <!-- Fallback for browsers without script support -->
+    <noscript>
+        <div style="padding: 2rem; text-align: center; font-family: system-ui; background: white; color: black;">
+            <h1 style="color: #dc2626;">JavaScript Required</h1>
+            <p>VibeMe requires JavaScript to function properly.</p>
+            <p>Please enable JavaScript in your browser settings.</p>
+        </div>
+    </noscript>
+
+    <!-- Footer -->
+    <footer class="fixed bottom-0 left-0 right-0 bg-black/20 backdrop-blur-sm border-t border-white/10 text-center py-2 z-[9999]">
+        <div class="container mx-auto px-4">
+            <p class="text-sm text-white/70">
+                Copyright © 2025 VibeMe By LHO. All rights reserved.
+            </p>
+        </div>
+    </footer>
+
+
+
+
+<!-- ===== FAVORITES (BEGIN) ===== -->
+<button id="favorites-toggle" type="button"
+  class="fixed right-4 bottom-24 z-[10002] rounded-full w-11 h-11 flex items-center justify-center bg-white/15 hover:bg-white/25 backdrop-blur-md shadow dynamic-text-secondary"
+  title="Open favorites" aria-label="Open favorites" aria-expanded="false" aria-controls="favorites-panel">
+  <i class="fas fa-bookmark" aria-hidden="true"></i>
+</button>
+
+<div id="favorites-panel"
+     class="favorites-panel fixed right-4 bottom-40 md:w-[420px] w-80 max-w-[92vw] z-[10001] rounded-2xl overflow-hidden"
+     data-state="closed" role="dialog" aria-modal="false" aria-labelledby="favorites-title" aria-hidden="true">
+  <div class="favorites-header flex items-center justify-between px-3 py-2">
+    <div class="flex items-center gap-2">
+      <i class="fas fa-bookmark text-xs opacity-80" aria-hidden="true"></i>
+      <h2 id="favorites-title" class="text-sm font-medium">Favorites</h2>
+      <span id="favorites-count" class="favorites-count-chip text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+    </div>
+    <div class="flex gap-1">
+      <button id="favorites-close" type="button" class="favorites-icon-btn" title="Close" aria-label="Close">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="favorites-body px-3 pb-3 pt-2">
+    <div id="favorites-empty" class="favorites-empty text-xs">
+      <i class="fas fa-inbox mr-1"></i> Your saved items show up here.
+    </div>
+    <div id="favorites-list" class="favorites-list mt-2 space-y-2 max-h-[60vh] overflow-y-auto overscroll-contain"></div>
+  </div>
+</div>
+<!-- ===== FAVORITES (END) ===== -->
+
+<!-- Toast root -->
+<div id="toast-root" class="fixed left-1/2 -translate-x-1/2 bottom-6 z-[99999] space-y-2 pointer-events-none"></div>
+
+<!-- Optional inline quotes for file:// demos.
+     If you plan to open index.html directly (file://), paste the exact JSON payload
+     from /data/quotes.json between these tags so quotes load without a server.
+     When serving over HTTP, you can leave this empty. -->
+<script id="quotes-inline" type="application/json">{
+  "categories": {
+    "love": [
+      {
+        "text": "Love isn't just finding the perfect person, but building a perfect bond with an imperfect soul.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "To love deeply is to offer a piece of your vulnerability, trusting it will be held gently.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Love speaks loudest in the quiet moments: a shared glance, a knowing smile, a hand held tight.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Self-love is the anchor that keeps you steady, even when the storms of life rage.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Love is the thread that stitches moments into memories worth keeping.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The greatest act of love is often listening without judgment.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Love doesn't demand perfection; it celebrates growth, together.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Compassion is the most powerful wireless connection you'll ever make.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Kindness is a language that doesn't need translation.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You don't rise by standing out—you rise by lifting others up with you.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Love is not about finding the right person, but creating a right relationship.",
+        "author": "Anonymous"
+      },
+      {
+        "text": "The best love is the kind that awakens the soul and makes us reach for more.",
+        "author": "Nicholas Sparks"
+      },
+      {
+        "text": "Love yourself first and everything else falls into line.",
+        "author": "Lucille Ball"
+      },
+      {
+        "text": "Being deeply loved by someone gives you strength, while loving someone deeply gives you courage.",
+        "author": "Lao Tzu"
+      },
+      {
+        "text": "Love is composed of a single soul inhabiting two bodies.",
+        "author": "Aristotle"
+      },
+      {
+        "text": "The greatest happiness you can have is knowing that you do not necessarily require happiness.",
+        "author": "William Saroyan"
+      },
+      {
+        "text": "Love is when the other person's happiness is more important than your own.",
+        "author": "H. Jackson Brown Jr."
+      },
+      {
+        "text": "To love and be loved is to feel the sun from both sides.",
+        "author": "David Viscott"
+      }
+    ],
+    "perseverance": [
+      {
+        "text": "Even the mightiest river began as a single drop refusing to stand still.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Don't measure progress by the finish line, but by the strength it took to take the next step.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Resilience is the art of bending without breaking, and rising stronger after the storm.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "When hope feels distant, let determination be your guide through the darkness.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Failure isn't falling down; it's refusing to get back up.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Keep climbing, not because the mountain shrinks, but because your spirit grows.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Persistence turns whispers of doubt into echoes of strength.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You weren't made to break—you were built to bend and rise stronger.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Resilience isn't loud; it's the silent echo of 'I'll try again tomorrow.'",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The storm doesn't scare those who were born in the rain.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Struggles teach you who you are. Surviving teaches you who you can become.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Every scar is a trophy for a battle you didn't back down from.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Your past may have shaped you, but your grit will define you.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Tough days don't last—tough hearts do.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Success doesn't knock. It waits for the one who keeps building the door.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The more you get up, the more life realizes it can't knock you down.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You're not behind—you're just loading.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "If it's meant for you, it won't ghost you.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Keep going. Your dream didn't come this far to ghost you.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Trust the glow-up process, even when it feels like downtime.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Plot twist: You win anyway.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "My obstacles taught me strength; resilience turned them into stepping stones.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "We don't choose our battles, but we always choose how we fight them.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "I was born to adapt—change isn't my enemy, it's my superpower.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Limitations don't define me, my perseverance does.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Every scar tells a story—my stories speak louder than my scars ever could.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The toughest roads shape the strongest people.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "When life gives you chaos, build resilience from its pieces.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "I don't overcome adversity to prove others wrong—I do it to prove myself right.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Challenges aren't punishments; they're training grounds for greatness.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "My strength isn't measured by what I've endured, but by how I've grown from it.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Strength isn't found by avoiding pain, but by facing it head-on.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Adversity is temporary; resilience lasts forever.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Storms come and go, but the strongest trees have the deepest roots.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "True grit doesn't announce itself—it quietly persists.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Challenges can knock you down—but only your spirit decides if you stay there.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Scars remind us not of weakness, but of our unmatched ability to heal.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Resilience doesn't mean invulnerability—it means unstoppable recovery.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Your setbacks aren't roadblocks; they're stepping stones to greatness.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "An expert in anything was once a beginner who didn't quit.",
+        "author": "Unknown"
+      },
+      {
+        "text": "Perseverance is stubbornness with a purpose.",
+        "author": "Unknown"
+      },
+      {
+        "text": "It's always too soon to quit.",
+        "author": "Unknown"
+      },
+      {
+        "text": "The difference between ordinary and extraordinary is that little extra.",
+        "author": "Jimmy Johnson"
+      },
+      {
+        "text": "It does not matter how slowly you go as long as you do not stop.",
+        "author": "Confucius"
+      },
+      {
+        "text": "Perseverance is failing 19 times and succeeding the 20th.",
+        "author": "Julie Andrews"
+      },
+      {
+        "text": "The brick walls are there for a reason. They're not there to keep us out. They're there to give us a chance to show how badly we want something.",
+        "author": "Randy Pausch"
+      },
+      {
+        "text": "Fall seven times, stand up eight.",
+        "author": "Japanese Proverb"
+      },
+      {
+        "text": "Champions keep playing until they get it right.",
+        "author": "Billie Jean King"
+      },
+      {
+        "text": "The most beautiful people I've known are those who have known trials, have known struggles, have known loss, and have found their way out of the depths.",
+        "author": "Elisabeth Kübler-Ross"
+      }
+    ],
+    "originality": [
+      {
+        "text": "Don't just echo the melody; compose your own symphony.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The well-trodden path offers comfort, but the untamed trail reveals wonders.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Your unique spark isn't meant to be hidden; it's meant to ignite something new.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Conformity builds cages; originality crafts keys.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Listen to the whispers of your own insight; they speak a language no one else knows.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "To be original is to translate the universe through your own distinct lens.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Be yourself; everyone else is already taken.",
+        "author": "Oscar Wilde"
+      },
+      {
+        "text": "To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment.",
+        "author": "Ralph Waldo Emerson"
+      },
+      {
+        "text": "Originality is just authenticity with a deadline.",
+        "author": "Gemini/LO"
+      },
+      {
+        "text": "You can't be original if you're trying to be approved.",
+        "author": "Gemini/LO"
+      },
+      {
+        "text": "Your unique perspective is the one ingredient no one else has.",
+        "author": "Gemini/LO"
+      },
+      {
+        "text": "Stop waiting for a map and start leaving footprints.",
+        "author": "Gemini/LO"
+      },
+      {
+        "text": "Your time is limited, don't waste it living someone else's life.",
+        "author": "Steve Jobs"
+      },
+      {
+        "text": "The individual has always had to struggle not to be overwhelmed by the tribe.",
+        "author": "Friedrich Nietzsche"
+      },
+      {
+        "text": "Authenticity is the daily practice of letting go of who we think we're supposed to be and embracing who we are.",
+        "author": "Brené Brown"
+      },
+      {
+        "text": "Don't be afraid to give up the good to go for the great.",
+        "author": "John D. Rockefeller"
+      },
+      {
+        "text": "The privilege of a lifetime is to become who you truly are.",
+        "author": "Carl Jung"
+      },
+      {
+        "text": "You were born to be real, not to be perfect.",
+        "author": "Ralph Marston"
+      }
+    ],
+    "change": [
+      {
+        "text": "Change is not a threat—it's an invitation.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Your next version requires a burial of the old one.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Change feels chaotic because growth is unfamiliar.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The future starts the moment you say 'I'm done settling.'",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "When life breaks you, rebuild with boundaries.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Nothing changes unless you choose it.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Evolve louder than your excuses.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The caterpillar thought it was the end—until it flew.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Growth isn't about speed, it's about direction.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Failing isn't falling—failing is staying there.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Clarity doesn't come from overthinking—it comes from showing up.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Learning is lifelong—failure just sharpens the lesson.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "I succeed not by never failing, but by never quitting.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Education isn't a status—it's a state of openness.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Every uncertainty holds an opportunity to become better.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The key to growth isn't perfection—it's persistence.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Success is built on lessons learned, not privileges given.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "I don't fear mistakes; I fear not growing from them.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Progress is quiet and persistent—true strength rarely shouts.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "When life tests me, I remember I'm the author of my next chapter.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Every day is a chance to rewrite your story.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Growth isn't about how fast you go, but how deep you dig.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Mistakes are teachers in disguise—embrace their lessons.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You don't grow by staying comfortable; discomfort is the gateway to evolution.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The greatest progress often happens in silence.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Never underestimate your power to reinvent your story.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "A closed mind never discovers; openness is the key to wisdom.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Success isn't always loud; sometimes it whispers quietly: 'Keep going.'",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Learning doesn't have an end—only endless new beginnings.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You can't start the next chapter of your life if you keep re-reading the last one.",
+        "author": "Unknown"
+      },
+      {
+        "text": "The only way to make sense out of change is to plunge into it, move with it, and join the dance.",
+        "author": "Alan Watts"
+      },
+      {
+        "text": "Change is the only constant in life.",
+        "author": "Heraclitus"
+      },
+      {
+        "text": "Yesterday I was clever, so I wanted to change the world. Today I am wise, so I am changing myself.",
+        "author": "Rumi"
+      },
+      {
+        "text": "Progress is impossible without change, and those who cannot change their minds cannot change anything.",
+        "author": "George Bernard Shaw"
+      },
+      {
+        "text": "If you don't like something, change it. If you can't change it, change your attitude.",
+        "author": "Maya Angelou"
+      },
+      {
+        "text": "The secret of change is to focus all of your energy not on fighting the old, but on building the new.",
+        "author": "Socrates"
+      },
+      {
+        "text": "Change will not come if we wait for some other person or some other time.",
+        "author": "Barack Obama"
+      },
+      {
+        "text": "Life is a series of natural and spontaneous changes. Don't resist them; that only creates sorrow.",
+        "author": "Lao Tzu"
+      }
+    ],
+    "inner_strength": [
+      {
+        "text": "Strength is the art of showing up—especially when it's hard.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Emotional intelligence is silent strength.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You can't heal what you won't feel.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Peace is the new power.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Inner calm doesn't mean life is quiet—it means you are.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Know your triggers so they can't own you.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Awareness is the gateway to transformation.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Stillness is a weapon when the world is loud.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Your mindset is either your prison or your passport—choose wisely.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You level up when you stop asking 'why me' and start asking 'what's next?'",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You're not stuck. You're evolving where no one can see yet.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Adapt like code: debug, rewrite, run again.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Different isn't a weakness—it's your system running with enhanced features.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You don't need to see to lead, hear to understand, or walk to move mountains.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Ability comes in different formats. All are valid. All are powerful.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Real strength is gentle. Real leadership listens.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You're not here to coast—you're here to change the current.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Do it for the version of you who once wondered if you'd make it.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Your story might start in struggle, but it can end in legacy.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You don't chase dreams—you build them, line by line.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You're not behind. You're just in your loading screen.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Healing is part of the grind too. Don't skip that level.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Every 'L' is just XP for your next win.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Boss up quietly. Let the results make the noise.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You're not stuck—you're buffering. Chill.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Your vibe is the resume. Your energy is the portfolio.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "They don't gotta get it. It's your vision, not theirs.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You don't need a seat at their table. Build your own with LED lights and a vibe.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Normalize being the main character AND taking a nap.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You are not too much. They're just not used to your frequency.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Secure the bag. But also secure your peace.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You were never 'too loud.' You were just finally being heard.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Romanticize your own growth—no one's clapping, but you're thriving.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You're already enough. The upgrades are just extra flair.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Your self-love era >>> any relationship era.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Post less. Build more. Let 'em wonder what you're up to.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Be the Wi-Fi in a room full of no signal.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Stack your wins like you stack playlists—one vibe at a time.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Create like nobody's watching, then drop it like a surprise album.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Life hands everyone a unique key—it's up to us to unlock the potential within and embrace the strength of our own story.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "My ambition isn't measured by titles, but by impact.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Determination is my roadmap; humility is my compass.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Goals aren't reached by wishing—they're conquered through doing.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The loudest voice in your journey should always be your own.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "My dreams don't have deadlines—just relentless determination.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Hard work never goes unnoticed—it echoes loudly through success.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Ambition is fuel, but perseverance is the engine.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Greatness isn't luck—it's disciplined consistency.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "A goal without action is just imagination.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "My success story is still being written—one determined step at a time.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Your ambitions don't care about yesterday's limits—neither should you.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Determination turns barriers into breakthroughs.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Dream boldly, plan wisely, execute relentlessly.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Ambition without action is just imagination in waiting.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The key to achieving greatness lies in daily, consistent choices.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Success isn't a single victory, it's the courage to keep showing up.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Passion ignites your journey; discipline ensures you reach your destination.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Greatness is a quiet decision made each day to move forward regardless.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The strongest people are not those who show strength in front of us, but those who win battles we know nothing about.",
+        "author": "Anonymous"
+      },
+      {
+        "text": "You have been assigned this mountain to show others it can be moved.",
+        "author": "Mel Robbins"
+      },
+      {
+        "text": "The cave you fear to enter holds the treasure you seek.",
+        "author": "Joseph Campbell"
+      },
+      {
+        "text": "Strength does not come from physical capacity. It comes from an indomitable will.",
+        "author": "Mahatma Gandhi"
+      },
+      {
+        "text": "You are braver than you believe, stronger than you seem, and smarter than you think.",
+        "author": "A.A. Milne"
+      },
+      {
+        "text": "The wound is the place where the Light enters you.",
+        "author": "Rumi"
+      },
+      {
+        "text": "What lies behind us and what lies before us are tiny matters compared to what lies within us.",
+        "author": "Ralph Waldo Emerson"
+      },
+      {
+        "text": "Turn your wounds into wisdom.",
+        "author": "Oprah Winfrey"
+      }
+    ],
+    "famous_quotes": [
+      {
+        "text": "Be the change that you wish to see in the world.",
+        "author": "Mahatma Gandhi"
+      },
+      {
+        "text": "In the middle of every difficulty lies opportunity.",
+        "author": "Albert Einstein"
+      },
+      {
+        "text": "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+        "author": "Winston Churchill"
+      },
+      {
+        "text": "The time is always right to do what is right.",
+        "author": "Martin Luther King Jr."
+      },
+      {
+        "text": "I have not failed. I've just found 10,000 ways that won't work.",
+        "author": "Thomas Edison"
+      },
+      {
+        "text": "Only those who dare to fail greatly can ever achieve greatly.",
+        "author": "Robert F. Kennedy"
+      },
+      {
+        "text": "I learned that courage was not the absence of fear, but the triumph over it.",
+        "author": "Nelson Mandela"
+      },
+      {
+        "text": "The only way to do great work is to love what you do.",
+        "author": "Steve Jobs"
+      }
+    ],
+    "wisdom": [
+      {
+        "text": "You don't grow through perfection—you grow through persistence.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Confidence is built when you stop waiting for permission to exist loudly.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Peace is the loudest form of rebellion in a chaotic world.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Your healing doesn't need to be pretty—it just needs to be yours.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Purpose is when your actions align with your highest self.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You are not stuck—you're preparing for your next level.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "If the door didn't open, maybe it wasn't your door.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The way you speak to yourself becomes the way you live your life.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Sometimes the greatest flex is peace.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You weren't born to fit into systems—you were born to build them.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Success is rented, and your grind is the rent due every sunrise.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "It's okay to start small. Wi-Fi started with a single signal.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You don't need a map if you trust your compass.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Even the cleanest code had to be rewritten. So will your habits.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Every IT issue has a root cause—and every personal setback has a growth lesson.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Sometimes, the best fix isn't a restart—it's a complete rebuild.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "In a world of automation, your humanity is your edge.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You're not just solving problems—you're building the infrastructure of resilience.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "In tech and in life, don't fear the crash—fear not learning from the crash log.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Discipline is the original software update—install it daily.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Success isn't in the download speed. It's in how well you handle the lag.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "If Plan A fails, remember—there are 25 more letters.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You debug machines for a living, but don't forget to debug your own mindset too.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Legacy isn't built in the spotlight. It's forged in quiet consistency.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Purpose isn't a destination—it's how you walk the path.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Don't rush the glow-up. Even diamonds take pressure + time.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Your journey isn't mid—it's just still in beta.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Don't compare your highlight reel to someone else's trailer.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Soft era doesn't mean weak. It means protecting your peace like it's gold.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "It's okay to log off. Rest is productivity too.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Make moves in silence. Screenshot the win later.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Grind now, soft life later.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Not every success needs a post. Keep some wins private.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Discipline is the cheat code nobody tells you about.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Stay lowkey, move like a ghost update.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Don't flex. Build. The flex comes after.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You're not lost. You're just in plot development.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Trust the algorithm of life. It's working even when you can't see it.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Universe isn't ignoring you—it's just cooking something real.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Don't rush divine timing. It doesn't do express shipping.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Every delay is a divine redirection.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "You're not failing—you're just getting your origin story.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Technology doesn't just innovate—it empowers our humanity.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The greatest tech isn't made of circuits, but of compassion.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "I see potential not just in code, but in the connections it creates.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "AI doesn't define our future; how we choose to use it does.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The best technology solves human problems—not creates them.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Every tech breakthrough starts with empathy.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Innovation isn't about shiny new tools; it's about brighter possibilities.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Tech is the canvas, humans are the artists—together we create magic.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "Success isn't just about coding solutions—it's about building bridges.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "The keyboard connects minds across dimensions we can't even measure.",
+        "author": "Lincoln Ogden"
+      },
+      {
+        "text": "AI can process data faster than us, but it takes a human heart to decide what matters.",
+        "author": "Lincoln Ogden"
+      }
+    ]
+  }
+}</script>
+</body>
+</html>
